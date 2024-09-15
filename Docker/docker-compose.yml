@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: mqtt_server
+    ports:
+      - "1883:1883"
+      - "9001:9001" # WebSocket opcional
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - app_network
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: admin  # Defina sua senha
+      MYSQL_DATABASE: smartlettuce
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: 123
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app_network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
