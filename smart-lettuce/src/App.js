@@ -1,16 +1,34 @@
 import React from 'react';
-import SensorData from './SensorData';
+import Home from './components/Home';
+import Sobre from './components/Sobre';
+import Devices from './components/Devices';
+
+import {BrowserRouter, Routes, Link, Route } from 'react-router-dom';
+import {Nav} from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Bem-vindo ao Meu Projeto IoT!</h1>
-        <SensorData type="Umidade" value="45%" />
-        <SensorData type="Temperatura" value="22°C" />
-        <SensorData type="pH" value="6.8" />
-      </header>
-    </div>
+    <>
+      <div className="App">
+        <BrowserRouter>
+
+        <Nav variant="tabs">
+          <Nav.Link as={Link} to="/">Página Inicial</Nav.Link>
+          <Nav.Link as={Link} to="/devices">Devices</Nav.Link>
+          <Nav.Link as={Link} to="/sobre">Sobre</Nav.Link>
+        </Nav>
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/devices" element={<Devices />} />
+          <Route path="/sobre" element={<Sobre />} />
+        </Routes>
+
+        </BrowserRouter>
+
+      </div>
+    </>
   );
 }
 
