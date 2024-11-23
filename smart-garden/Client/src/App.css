@@ -9,7 +9,7 @@
     --bg-color: #f5f6fa;
     --shadow-color: rgba(0, 0, 0, 0.1);
     --card-width: 800px;
-    --card-padding: 20px;
+    --card-padding: 20px; 
   }
   
   body {
