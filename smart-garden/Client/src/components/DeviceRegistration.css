@@ -1,0 +1,37 @@
+.custom-table {
+  border: 0px solid #fff;
+  border-bottom: 1px solid #c1c1c1;
+}
+
+
+.custom-btn-primary {
+  background-color: #4f7335; /* Cor personalizada do botão */
+  border-color: #4f7335;
+  color: white;
+}
+
+.custom-btn-primary:hover {
+  background-color: #659940; /* Cor ao passar o mouse */
+  border-color: #659940;
+}
+
+.custom-btn-secondary {
+  background-color: #f44336; /* Cor personalizada do botão */
+  border-color: #f44336;
+  color: white;
+}
+
+.custom-btn-secondary:hover {
+  background-color: #d32f2f; /* Cor ao passar o mouse */
+  border-color: #d32f2f;
+}
+
+.card{
+  border: 0px solid #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+
+
+/* #4f7335  */

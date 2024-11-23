@@ -1,0 +1,41 @@
+/* Define a altura mínima da tela para ocupar o viewport */
+.half {
+    min-height: 100vh; /* Garante que ocupa 100% da altura da viewport */
+  }
+  
+  .contents {
+    background-color: #ffffff; /* Fundo branco para destacar o lado esquerdo */
+    overflow-y: auto; /* Permite rolagem vertical, se necessário */
+  }
+  
+  .bg {
+    background-size: cover; /* Ajusta a imagem para cobrir todo o espaço */
+    background-position: center; /* Centraliza a imagem */
+  }
+  
+  .opacity-mask {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
+    padding: 20px;
+  }
+  
+  #dsd-heading {
+    font-size: 2.5rem; /* Ajuste o tamanho do título */
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  
+  #dsd-description {
+    font-size: 1.2rem; /* Ajuste o tamanho do texto */
+    color: #e1e1e1;
+    max-width: 80%; /* Limita a largura máxima do texto */
+    word-break: break-word;
+  }
+
+  .input-group-prepend{
+    margin: 10px;
+  }
+  
