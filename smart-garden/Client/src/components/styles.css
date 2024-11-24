@@ -24,11 +24,6 @@ body {
   overflow: visible;
 }
 
-.logo-container {
-  display: flex;
-  align-items: center;
-}
-
 .auth-icons {
   display: flex;
   align-items: center;

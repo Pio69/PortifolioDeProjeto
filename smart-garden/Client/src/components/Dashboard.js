@@ -14,8 +14,12 @@ function Dashboard() {
 
   const temperatureChartRef = useRef(null);
   const soilMoistureChartRef = useRef(null);
-  const temperatureChartInstance = useRef(null); // Instância do gráfico de temperatura e umidade
-  const soilMoistureChartInstance = useRef(null); // Instância do gráfico de umidade do solo
+  const phChartRef = useRef(null); // Referência ao gráfico de pH
+  const npkChartRef = useRef(null); // Referência ao gráfico de NPK
+  const temperatureChartInstance = useRef(null);
+  const soilMoistureChartInstance = useRef(null);
+  const phChartInstance = useRef(null); // Instância do gráfico de pH
+  const npkChartInstance = useRef(null); // Instância do gráfico de NPK
 
   const fetchData = async () => {
     try {
@@ -27,7 +31,7 @@ function Dashboard() {
       if (dashboardResponse.data.success && historyResponse.data.success) {
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
-        setLastUpdated(new Date()); // Atualiza o tempo de última atualização
+        setLastUpdated(new Date());
       } else {
         setError("Erro ao carregar dados.");
       }
@@ -40,14 +44,19 @@ function Dashboard() {
 
   const initializeCharts = () => {
     if (historyData.length > 0) {
-      // Limpa gráficos existentes antes de criar novos
       if (temperatureChartInstance.current) {
         temperatureChartInstance.current.destroy();
       }
       if (soilMoistureChartInstance.current) {
         soilMoistureChartInstance.current.destroy();
       }
-  
+      if (phChartInstance.current) {
+        phChartInstance.current.destroy();
+      }
+      if (npkChartInstance.current) {
+        npkChartInstance.current.destroy();
+      }
+
       const temperatureHumidityData = historyData
         .filter(
           (item) =>
@@ -58,7 +67,7 @@ function Dashboard() {
           value: item.sensor_value,
           type: item.sensor_type,
         }));
-  
+
       const soilMoistureData = historyData
         .filter((item) => item.sensor_type === "SoilMoisture")
         .map((item) => ({
@@ -66,8 +75,28 @@ function Dashboard() {
           value: item.sensor_value,
           type: item.sensor_type,
         }));
-  
-      // Gráfico de Temperatura e Umidade
+
+      const phData = historyData
+        .filter((item) => item.sensor_type === "pH")
+        .map((item) => ({
+          date: item.data,
+          value: item.sensor_value,
+          type: item.sensor_type,
+        }));
+
+      const npkData = historyData
+        .filter(
+          (item) =>
+            item.sensor_type === "NPKNitrogen" ||
+            item.sensor_type === "NPKPhosphorus" ||
+            item.sensor_type === "NPKPotassium"
+        )
+        .map((item) => ({
+          date: item.data,
+          value: item.sensor_value,
+          type: item.sensor_type,
+        }));
+
       if (temperatureChartRef.current) {
         temperatureChartInstance.current = new Line(temperatureChartRef.current, {
           data: temperatureHumidityData,
@@ -80,10 +109,9 @@ function Dashboard() {
             shape: "circle",
           },
           xAxis: {
-            type: "time", // Define o eixo X como um eixo de tempo
+            type: "time",
             label: {
               formatter: (text) => {
-                // Formata a data para exibição
                 const date = new Date(text);
                 return `${date.getDate()}/${date.getMonth() + 1}/${date
                   .getFullYear()
@@ -93,9 +121,9 @@ function Dashboard() {
             },
           },
           yAxis: {
-            tickInterval: 5, // Define intervalos inteiros para o eixo Y
+            tickInterval: 5,
             label: {
-              formatter: (text) => `${Math.round(text)}`, // Garante inteiros no eixo Y
+              formatter: (text) => `${Math.round(text)}`,
             },
           },
           tooltip: {
@@ -105,8 +133,7 @@ function Dashboard() {
         });
         temperatureChartInstance.current.render();
       }
-  
-      // Gráfico de Umidade do Solo
+
       if (soilMoistureChartRef.current) {
         soilMoistureChartInstance.current = new Line(soilMoistureChartRef.current, {
           data: soilMoistureData,
@@ -119,10 +146,9 @@ function Dashboard() {
             shape: "circle",
           },
           xAxis: {
-            type: "time", // Define o eixo X como um eixo de tempo
+            type: "time",
             label: {
               formatter: (text) => {
-                // Formata a data para exibição
                 const date = new Date(text);
                 return `${date.getDate()}/${date.getMonth() + 1}/${date
                   .getFullYear()
@@ -138,9 +164,73 @@ function Dashboard() {
         });
         soilMoistureChartInstance.current.render();
       }
+
+      // Gráfico de pH
+      if (phChartRef.current) {
+        phChartInstance.current = new Line(phChartRef.current, {
+          data: phData,
+          xField: "date",
+          yField: "value",
+          seriesField: "type",
+          color: ["#8e44ad"],
+          point: {
+            size: 5,
+            shape: "circle",
+          },
+          xAxis: {
+            type: "time",
+            label: {
+              formatter: (text) => {
+                const date = new Date(text);
+                return `${date.getDate()}/${date.getMonth() + 1}/${date
+                  .getFullYear()
+                  .toString()
+                  .slice(-2)}`; // Fixed here
+              },
+            },
+          },
+          tooltip: {
+            shared: true,
+          },
+          animation: true,
+        });
+        phChartInstance.current.render();
+      }
+
+      // Gráfico de NPK
+      if (npkChartRef.current) {
+        npkChartInstance.current = new Line(npkChartRef.current, {
+          data: npkData,
+          xField: "date",
+          yField: "value",
+          seriesField: "type",
+          color: ["#e74c3c", "#2980b9", "#27ae60"],
+          point: {
+            size: 5,
+            shape: "circle",
+          },
+          xAxis: {
+            type: "time",
+            label: {
+              formatter: (text) => {
+                const date = new Date(text);
+                return `${date.getDate()}/${date.getMonth() + 1}/${date
+                  .getFullYear()
+                  .toString()
+                  .slice(-2)}`;
+              },
+            },
+          },
+          tooltip: {
+            shared: true,
+          },
+          animation: true,
+        });
+        npkChartInstance.current.render();
+      }
     }
   };
-  
+
   const getTimeAgo = () => {
     const now = new Date();
     const diff = Math.round((now - lastUpdated) / 60000);
@@ -157,7 +247,6 @@ function Dashboard() {
       initializeCharts();
     }
 
-    // Cleanup: Destrói gráficos ao desmontar o componente
     return () => {
       if (temperatureChartInstance.current) {
         temperatureChartInstance.current.destroy();
@@ -166,6 +255,14 @@ function Dashboard() {
       if (soilMoistureChartInstance.current) {
         soilMoistureChartInstance.current.destroy();
         soilMoistureChartInstance.current = null;
+      }
+      if (phChartInstance.current) {
+        phChartInstance.current.destroy();
+        phChartInstance.current = null;
+      }
+      if (npkChartInstance.current) {
+        npkChartInstance.current.destroy();
+        npkChartInstance.current = null;
       }
     };
   }, [historyData]);
@@ -192,7 +289,6 @@ function Dashboard() {
       <div className="dashboard">
         <Sidebar />
         <div className="main-content">
-          {/* Linha 1: Cards com os dados dos sensores */}
           <div className="stats-grid">
             {sensorsData && (
               <>
@@ -238,7 +334,6 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Linha 2: Gráficos */}
           <div className="charts-grid">
             <div className="chart-container">
               <h3 className="chart-title">Air Temperature & Humidity</h3>
@@ -250,6 +345,20 @@ function Dashboard() {
             <div className="chart-container">
               <h3 className="chart-title">Soil Moisture</h3>
               <div ref={soilMoistureChartRef} className="chart"></div>
+              <div className="last-updated">
+                <span>{getTimeAgo()}</span>
+              </div>
+            </div>
+            <div className="chart-container">
+              <h3 className="chart-title">pH Levels</h3>
+              <div ref={phChartRef} className="chart"></div>
+              <div className="last-updated">
+                <span>{getTimeAgo()}</span>
+              </div>
+            </div>
+            <div className="chart-container">
+              <h3 className="chart-title">NPK Levels</h3>
+              <div ref={npkChartRef} className="chart"></div>
               <div className="last-updated">
                 <span>{getTimeAgo()}</span>
               </div>
