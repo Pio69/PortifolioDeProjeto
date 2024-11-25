@@ -2,8 +2,12 @@
 const db = require("../models/db");
 
 exports.getMeasures = async (req, res) => {
+  const { deviceId } = req.query;
   try {
-    const [rows] = await db.query("SELECT * FROM tb_measures");
+    const query = deviceId
+      ? "SELECT * FROM tb_measures WHERE device_id = ?"
+      : "SELECT * FROM tb_measures";
+    const [rows] = await db.query(query, [deviceId]);
     res.status(200).json(rows);
   } catch (err) {
     console.error("Erro ao buscar os dados de tb_measures:", err);
@@ -13,6 +17,7 @@ exports.getMeasures = async (req, res) => {
 
 // Obter o histórico completo de medições
 exports.getHistory = async (req, res) => {
+  const { deviceId } = req.query;
   try {
     const query = `
       SELECT 
@@ -21,11 +26,12 @@ exports.getHistory = async (req, res) => {
         data
       FROM 
         tb_measures
+      ${deviceId ? "WHERE device_id = ?" : ""}
       ORDER BY 
         data ASC;
     `;
 
-    const [rows] = await db.query(query);
+    const [rows] = await db.query(query, deviceId ? [deviceId] : []);
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Nenhum dado encontrado' });

@@ -8,34 +8,62 @@ import "./Dashboard.css";
 function Dashboard() {
   const [sensorsData, setSensorsData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
+  const [climateData, setClimateData] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState("");
 
   const temperatureChartRef = useRef(null);
   const soilMoistureChartRef = useRef(null);
-  const phChartRef = useRef(null); // Referência ao gráfico de pH
-  const npkChartRef = useRef(null); // Referência ao gráfico de NPK
+  const phChartRef = useRef(null);
+  const npkChartRef = useRef(null);
   const temperatureChartInstance = useRef(null);
   const soilMoistureChartInstance = useRef(null);
-  const phChartInstance = useRef(null); // Instância do gráfico de pH
-  const npkChartInstance = useRef(null); // Instância do gráfico de NPK
+  const phChartInstance = useRef(null);
+  const npkChartInstance = useRef(null);
 
-  const fetchData = async () => {
+  // Função para calcular o tempo desde a última atualização
+  const getTimeAgo = () => {
+    const now = new Date();
+    const diff = now - lastUpdated;
+    const diffSeconds = Math.floor(diff / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) {
+      return `Atualizado há ${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+    } else if (diffHours > 0) {
+      return `Atualizado há ${diffHours} hora${diffHours > 1 ? "s" : ""}`;
+    } else if (diffMinutes > 0) {
+      return `Atualizado há ${diffMinutes} minuto${diffMinutes > 1 ? "s" : ""}`;
+    } else {
+      return "Atualizado agora mesmo";
+    }
+  };
+
+  const fetchData = async (deviceId) => {
     try {
-      const [dashboardResponse, historyResponse] = await Promise.all([
-        axios.get("http://localhost:3001/dashboard"),
-        axios.get("http://localhost:3001/measures/history"),
+      setLoading(true);
+      setError(null);
+      const [dashboardResponse, historyResponse, climateResponse] = await Promise.all([
+        axios.get(`http://localhost:3001/dashboard?deviceId=${deviceId}`),
+        axios.get(`http://localhost:3001/measures/history?deviceId=${deviceId}`),
+        axios.get(`http://localhost:3001/climate?deviceId=${deviceId}`)
       ]);
 
-      if (dashboardResponse.data.success && historyResponse.data.success) {
+      if (dashboardResponse.data.success && historyResponse.data.success && climateResponse.data.success) {
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
+        setClimateData(climateResponse.data.data);
         setLastUpdated(new Date());
       } else {
         setError("Erro ao carregar dados.");
       }
     } catch (err) {
+      console.error(err);
       setError("Erro ao se conectar com o servidor.");
     } finally {
       setLoading(false);
@@ -43,31 +71,46 @@ function Dashboard() {
   };
 
   const initializeCharts = () => {
-    if (historyData.length > 0) {
-      if (temperatureChartInstance.current) {
-        temperatureChartInstance.current.destroy();
-      }
-      if (soilMoistureChartInstance.current) {
-        soilMoistureChartInstance.current.destroy();
-      }
-      if (phChartInstance.current) {
-        phChartInstance.current.destroy();
-      }
-      if (npkChartInstance.current) {
-        npkChartInstance.current.destroy();
-      }
+    // Destruir instâncias anteriores dos gráficos, se existirem
+    if (temperatureChartInstance.current) {
+      temperatureChartInstance.current.destroy();
+    }
+    if (soilMoistureChartInstance.current) {
+      soilMoistureChartInstance.current.destroy();
+    }
+    if (phChartInstance.current) {
+      phChartInstance.current.destroy();
+    }
+    if (npkChartInstance.current) {
+      npkChartInstance.current.destroy();
+    }
 
-      const temperatureHumidityData = historyData
-        .filter(
-          (item) =>
-            item.sensor_type === "Temperature" || item.sensor_type === "Humidity"
-        )
-        .map((item) => ({
-          date: item.data,
-          value: item.sensor_value,
-          type: item.sensor_type,
-        }));
+    if (historyData.length > 0 || climateData.length > 0) {
+      // Preparar dados para os gráficos de Temperatura e Umidade
+      const temperatureHumidityData = [
+        ...historyData
+          .filter(
+            (item) =>
+              item.sensor_type === "Temperature" || item.sensor_type === "Humidity"
+          )
+          .map((item) => ({
+            date: item.data,
+            value: item.sensor_value,
+            type: item.sensor_type,
+          })),
+        ...climateData
+          .filter(
+            (item) =>
+              item.sensor_type === "Temperature" || item.sensor_type === "Humidity"
+          )
+          .map((item) => ({
+            date: item.recorded_at,
+            value: item.value,
+            type: item.sensor_type,
+          })),
+      ];
 
+      // Preparar dados para o gráfico de Umidade do Solo
       const soilMoistureData = historyData
         .filter((item) => item.sensor_type === "SoilMoisture")
         .map((item) => ({
@@ -76,6 +119,7 @@ function Dashboard() {
           type: item.sensor_type,
         }));
 
+      // Preparar dados para o gráfico de pH
       const phData = historyData
         .filter((item) => item.sensor_type === "pH")
         .map((item) => ({
@@ -84,6 +128,7 @@ function Dashboard() {
           type: item.sensor_type,
         }));
 
+      // Preparar dados para o gráfico de NPK
       const npkData = historyData
         .filter(
           (item) =>
@@ -97,6 +142,7 @@ function Dashboard() {
           type: item.sensor_type,
         }));
 
+      // Inicializar o gráfico de Temperatura e Umidade
       if (temperatureChartRef.current) {
         temperatureChartInstance.current = new Line(temperatureChartRef.current, {
           data: temperatureHumidityData,
@@ -134,6 +180,7 @@ function Dashboard() {
         temperatureChartInstance.current.render();
       }
 
+      // Inicializar o gráfico de Umidade do Solo
       if (soilMoistureChartRef.current) {
         soilMoistureChartInstance.current = new Line(soilMoistureChartRef.current, {
           data: soilMoistureData,
@@ -165,7 +212,7 @@ function Dashboard() {
         soilMoistureChartInstance.current.render();
       }
 
-      // Gráfico de pH
+      // Inicializar o gráfico de pH
       if (phChartRef.current) {
         phChartInstance.current = new Line(phChartRef.current, {
           data: phData,
@@ -185,7 +232,7 @@ function Dashboard() {
                 return `${date.getDate()}/${date.getMonth() + 1}/${date
                   .getFullYear()
                   .toString()
-                  .slice(-2)}`; // Fixed here
+                  .slice(-2)}`;
               },
             },
           },
@@ -197,7 +244,7 @@ function Dashboard() {
         phChartInstance.current.render();
       }
 
-      // Gráfico de NPK
+      // Inicializar o gráfico de NPK
       if (npkChartRef.current) {
         npkChartInstance.current = new Line(npkChartRef.current, {
           data: npkData,
@@ -231,23 +278,33 @@ function Dashboard() {
     }
   };
 
-  const getTimeAgo = () => {
-    const now = new Date();
-    const diff = Math.round((now - lastUpdated) / 60000);
-    if (diff < 1) return "agora mesmo";
-    return `há ${diff} minuto${diff > 1 ? "s" : ""}`;
-  };
-
+  // Fetch devices ao montar o componente
   useEffect(() => {
-    fetchData();
+    const fetchDevices = async () => {
+      try {
+        const devicesResponse = await axios.get("http://localhost:3001/devices");
+        if (devicesResponse.data.success) {
+          setDevices(devicesResponse.data.data);
+        } else {
+          setError("Erro ao carregar dispositivos.");
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Erro ao se conectar com o servidor.");
+      }
+    };
+
+    fetchDevices();
   }, []);
 
+  // Inicializar gráficos quando historyData ou climateData mudarem
   useEffect(() => {
-    if (historyData.length > 0) {
+    if (historyData.length > 0 || climateData.length > 0) {
       initializeCharts();
     }
 
     return () => {
+      // Limpar instâncias dos gráficos ao desmontar ou atualizar
       if (temperatureChartInstance.current) {
         temperatureChartInstance.current.destroy();
         temperatureChartInstance.current = null;
@@ -265,8 +322,9 @@ function Dashboard() {
         npkChartInstance.current = null;
       }
     };
-  }, [historyData]);
+  }, [historyData, climateData]);
 
+  // Renderização condicional para loading e error
   if (loading) {
     return (
       <div className="loading">
@@ -289,25 +347,48 @@ function Dashboard() {
       <div className="dashboard">
         <Sidebar />
         <div className="main-content">
+          <div className="device-selector">
+            <label htmlFor="device-dropdown" className="device-label">Dispositivo</label>
+            <select
+              id="device-dropdown"
+              value={selectedDevice}
+              onChange={(e) => {
+                const selectedDeviceId = e.target.value;
+                setSelectedDevice(selectedDeviceId);
+                if (selectedDeviceId) {
+                  fetchData(selectedDeviceId);
+                }
+              }}
+              className="device-dropdown"
+            >
+              <option value="">Selecione um dispositivo</option>
+              {devices.map((device) => (
+                <option key={device.id} value={device.id}>
+                  {device.id} - {device.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <hr className="title-divisor" />
           <div className="stats-grid">
             {sensorsData && (
               <>
                 <div className="stat-card">
-                  <h3 className="stat-title">Temperature</h3>
+                  <h3 className="stat-title">Temperatura</h3>
                   <p className="stat-value">{sensorsData.Temperature}°C</p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <h3 className="stat-title">Humidity</h3>
+                  <h3 className="stat-title">Umidade</h3>
                   <p className="stat-value">{sensorsData.Humidity}%</p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <h3 className="stat-title">Soil Moisture</h3>
+                  <h3 className="stat-title">Umidade do Solo</h3>
                   <p className="stat-value">{sensorsData.SoilMoisture}%</p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
@@ -323,8 +404,7 @@ function Dashboard() {
                 <div className="stat-card">
                   <h3 className="stat-title">NPK</h3>
                   <p className="stat-value">
-                    {sensorsData.NPKNitrogen}-{sensorsData.NPKPhosphorus}-
-                    {sensorsData.NPKPotassium}
+                    {sensorsData.NPKNitrogen}-{sensorsData.NPKPhosphorus}-{sensorsData.NPKPotassium}
                   </p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
@@ -336,28 +416,28 @@ function Dashboard() {
 
           <div className="charts-grid">
             <div className="chart-container">
-              <h3 className="chart-title">Air Temperature & Humidity</h3>
+              <h3 className="chart-title">Temperatura e Umidade do Ar</h3>
               <div ref={temperatureChartRef} className="chart"></div>
               <div className="last-updated">
                 <span>{getTimeAgo()}</span>
               </div>
             </div>
             <div className="chart-container">
-              <h3 className="chart-title">Soil Moisture</h3>
+              <h3 className="chart-title">Umidade do Solo</h3>
               <div ref={soilMoistureChartRef} className="chart"></div>
               <div className="last-updated">
                 <span>{getTimeAgo()}</span>
               </div>
             </div>
             <div className="chart-container">
-              <h3 className="chart-title">pH Levels</h3>
+              <h3 className="chart-title">Níveis de pH</h3>
               <div ref={phChartRef} className="chart"></div>
               <div className="last-updated">
                 <span>{getTimeAgo()}</span>
               </div>
             </div>
             <div className="chart-container">
-              <h3 className="chart-title">NPK Levels</h3>
+              <h3 className="chart-title">Níveis de NPK</h3>
               <div ref={npkChartRef} className="chart"></div>
               <div className="last-updated">
                 <span>{getTimeAgo()}</span>
