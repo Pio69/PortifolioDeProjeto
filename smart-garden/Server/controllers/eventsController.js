@@ -5,7 +5,7 @@ const db = require('../models/db');
 exports.getEvents = async (req, res) => {
   try {
     const [events] = await db.query(
-      'SELECT id, `desc` AS alertMessage, `level` AS type, gene_by_ia FROM tb_events'
+      'SELECT `desc` AS alertMessage, `level` AS type, gene_by_ia FROM tb_events'
     );
     res.status(200).json({ success: true, data: events });
   } catch (error) {

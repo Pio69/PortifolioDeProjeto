@@ -14,6 +14,8 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const temperatureChartRef = useRef(null);
   const soilMoistureChartRef = useRef(null);
@@ -48,13 +50,22 @@ function Dashboard() {
     try {
       setLoading(true);
       setError(null);
+
+      // Construir parâmetros de data para a requisição
+      const params = {
+        deviceId: deviceId,
+        startDate: startDate ? `${startDate} 00:00:00` : undefined,
+        endDate: endDate ? `${endDate} 23:59:59` : undefined,
+      };
+
       const [dashboardResponse, historyResponse, climateResponse] = await Promise.all([
-        axios.get(`http://localhost:3001/dashboard?deviceId=${deviceId}`),
-        axios.get(`http://localhost:3001/measures/history?deviceId=${deviceId}`),
-        axios.get(`http://localhost:3001/climate?deviceId=${deviceId}`)
+        axios.get("http://localhost:3001/dashboard", { params }),
+        axios.get("http://localhost:3001/measures/history", { params }),
+        axios.get("http://localhost:3001/climate", { params }),
       ]);
 
       if (dashboardResponse.data.success && historyResponse.data.success && climateResponse.data.success) {
+        console.log(JSON.stringify(dashboardResponse.data.data))
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
         setClimateData(climateResponse.data.data);
@@ -84,64 +95,48 @@ function Dashboard() {
     if (npkChartInstance.current) {
       npkChartInstance.current.destroy();
     }
-
+  
     if (historyData.length > 0 || climateData.length > 0) {
-      // Preparar dados para os gráficos de Temperatura e Umidade
+      // Preparar dados para o gráfico de Temperatura e Umidade
       const temperatureHumidityData = [
-        ...historyData
-          .filter(
-            (item) =>
-              item.sensor_type === "Temperature" || item.sensor_type === "Humidity"
-          )
-          .map((item) => ({
-            date: item.data,
-            value: item.sensor_value,
-            type: item.sensor_type,
-          })),
-        ...climateData
-          .filter(
-            (item) =>
-              item.sensor_type === "Temperature" || item.sensor_type === "Humidity"
-          )
-          .map((item) => ({
-            date: item.recorded_at,
-            value: item.value,
-            type: item.sensor_type,
-          })),
+        ...historyData.map((item) => ({
+          date: item.created_at,
+          value: item.temperature,
+          type: "Temperature",
+        })),
+        ...historyData.map((item) => ({
+          date: item.created_at,
+          value: item.humidity,
+          type: "Humidity",
+        })),
+        ...climateData.map((item) => ({
+          date: item.recorded_at,
+          value: item.value,
+          type: item.sensor_type,
+        })),
       ];
-
-      // Preparar dados para o gráfico de Umidade do Solo
-      const soilMoistureData = historyData
-        .filter((item) => item.sensor_type === "SoilMoisture")
-        .map((item) => ({
-          date: item.data,
-          value: item.sensor_value,
-          type: item.sensor_type,
-        }));
-
+  
       // Preparar dados para o gráfico de pH
-      const phData = historyData
-        .filter((item) => item.sensor_type === "pH")
-        .map((item) => ({
-          date: item.data,
-          value: item.sensor_value,
-          type: item.sensor_type,
-        }));
-
+      const phData = historyData.map((item) => ({
+        date: item.created_at,
+        value: item.ph,
+        type: "pH",
+      }));
+  
       // Preparar dados para o gráfico de NPK
-      const npkData = historyData
-        .filter(
-          (item) =>
-            item.sensor_type === "NPKNitrogen" ||
-            item.sensor_type === "NPKPhosphorus" ||
-            item.sensor_type === "NPKPotassium"
-        )
-        .map((item) => ({
-          date: item.data,
-          value: item.sensor_value,
-          type: item.sensor_type,
-        }));
-
+      const npkData = historyData.flatMap((item) => [
+        { date: item.created_at, value: item.nitrogen, type: "Nitrogen" },
+        { date: item.created_at, value: item.phosphorus, type: "Phosphorus" },
+        { date: item.created_at, value: item.potassium, type: "Potassium" },
+      ]);
+  
+      // Preparar dados para o gráfico de Umidade do Solo
+      const soilMoistureData = historyData.map((item) => ({
+        date: item.created_at,
+        value: item.humidity,
+        type: "Humidity",
+      }));
+  
       // Inicializar o gráfico de Temperatura e Umidade
       if (temperatureChartRef.current) {
         temperatureChartInstance.current = new Line(temperatureChartRef.current, {
@@ -150,10 +145,7 @@ function Dashboard() {
           yField: "value",
           seriesField: "type",
           color: ["#3498db", "#2ecc71"],
-          point: {
-            size: 5,
-            shape: "circle",
-          },
+          smooth: true, // Faz a linha ficar suavizada para melhorar a visualização
           xAxis: {
             type: "time",
             label: {
@@ -180,38 +172,7 @@ function Dashboard() {
         temperatureChartInstance.current.render();
       }
 
-      // Inicializar o gráfico de Umidade do Solo
-      if (soilMoistureChartRef.current) {
-        soilMoistureChartInstance.current = new Line(soilMoistureChartRef.current, {
-          data: soilMoistureData,
-          xField: "date",
-          yField: "value",
-          seriesField: "type",
-          color: ["#f39c12"],
-          point: {
-            size: 5,
-            shape: "circle",
-          },
-          xAxis: {
-            type: "time",
-            label: {
-              formatter: (text) => {
-                const date = new Date(text);
-                return `${date.getDate()}/${date.getMonth() + 1}/${date
-                  .getFullYear()
-                  .toString()
-                  .slice(-2)}`;
-              },
-            },
-          },
-          tooltip: {
-            shared: true,
-          },
-          animation: true,
-        });
-        soilMoistureChartInstance.current.render();
-      }
-
+  
       // Inicializar o gráfico de pH
       if (phChartRef.current) {
         phChartInstance.current = new Line(phChartRef.current, {
@@ -243,7 +204,7 @@ function Dashboard() {
         });
         phChartInstance.current.render();
       }
-
+  
       // Inicializar o gráfico de NPK
       if (npkChartRef.current) {
         npkChartInstance.current = new Line(npkChartRef.current, {
@@ -275,8 +236,41 @@ function Dashboard() {
         });
         npkChartInstance.current.render();
       }
+  
+      // Inicializar o gráfico de Umidade do Solo
+      if (soilMoistureChartRef.current) {
+        soilMoistureChartInstance.current = new Line(soilMoistureChartRef.current, {
+          data: soilMoistureData,
+          xField: "date",
+          yField: "value",
+          seriesField: "type",
+          color: ["#f39c12"],
+          point: {
+            size: 5,
+            shape: "circle",
+          },
+          xAxis: {
+            type: "time",
+            label: {
+              formatter: (text) => {
+                const date = new Date(text);
+                return `${date.getDate()}/${date.getMonth() + 1}/${date
+                  .getFullYear()
+                  .toString()
+                  .slice(-2)}`;
+              },
+            },
+          },
+          tooltip: {
+            shared: true,
+          },
+          animation: true,
+        });
+        soilMoistureChartInstance.current.render();
+      }
     }
   };
+  
 
   // Fetch devices ao montar o componente
   useEffect(() => {
@@ -369,34 +363,64 @@ function Dashboard() {
               ))}
             </select>
           </div>
+          <div className="date-filter">
+            <label htmlFor="start-date" className="date-label">Data de Início:</label>
+            <input
+              type="date"
+              id="start-date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="date-input"
+            />
+
+            <label htmlFor="end-date" className="date-label">Data de Fim:</label>
+            <input
+              type="date"
+              id="end-date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="date-input"
+            />
+
+            <button
+              onClick={() => {
+                if (selectedDevice) {
+                  fetchData(selectedDevice);
+                }
+              }}
+              className="filter-button"
+            >
+              Filtrar
+            </button>
+          </div>
+
           <hr className="title-divisor" />
           <div className="stats-grid">
             {sensorsData && (
               <>
                 <div className="stat-card">
                   <h3 className="stat-title">Temperatura</h3>
-                  <p className="stat-value">{sensorsData.Temperature}°C</p>
+                  <p className="stat-value">
+                    {sensorsData.Temperature !== undefined ? `${sensorsData.Temperature}°C` : "--"}
+                  </p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
                   </div>
                 </div>
                 <div className="stat-card">
                   <h3 className="stat-title">Umidade</h3>
-                  <p className="stat-value">{sensorsData.Humidity}%</p>
-                  <div className="last-updated">
-                    <span>{getTimeAgo()}</span>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <h3 className="stat-title">Umidade do Solo</h3>
-                  <p className="stat-value">{sensorsData.SoilMoisture}%</p>
+                  <p className="stat-value">
+                    {sensorsData.Humidity !== undefined ? `${sensorsData.Humidity}%` : "--"}
+                  </p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
                   </div>
                 </div>
                 <div className="stat-card">
                   <h3 className="stat-title">pH</h3>
-                  <p className="stat-value">{sensorsData.pH}</p>
+                  <p className="stat-value">
+                    {sensorsData.pH !== undefined ? sensorsData.pH : "--"}
+                  </p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
                   </div>
@@ -404,7 +428,11 @@ function Dashboard() {
                 <div className="stat-card">
                   <h3 className="stat-title">NPK</h3>
                   <p className="stat-value">
-                    {sensorsData.NPKNitrogen}-{sensorsData.NPKPhosphorus}-{sensorsData.NPKPotassium}
+                    {sensorsData.Nitrogen !== undefined &&
+                    sensorsData.Phosphorus !== undefined &&
+                    sensorsData.Potassium !== undefined
+                      ? `${sensorsData.Nitrogen}-${sensorsData.Phosphorus}-${sensorsData.Potassium}`
+                      : "--"}
                   </p>
                   <div className="last-updated">
                     <span>{getTimeAgo()}</span>
@@ -413,6 +441,8 @@ function Dashboard() {
               </>
             )}
           </div>
+
+
 
           <div className="charts-grid">
             <div className="chart-container">
