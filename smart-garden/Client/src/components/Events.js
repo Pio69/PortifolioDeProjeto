@@ -7,8 +7,9 @@ import './Events.css';
 
 function Events() {
   const [events, setEvents] = useState([]);
+  const [predictedFertilizer, setPredictedFertilizer] = useState(null);
 
-  // Buscar eventos do backend
+  // Função para buscar eventos do backend
   const fetchEvents = async () => {
     try {
       const response = await axios.get('http://localhost:3001/events');
@@ -18,7 +19,19 @@ function Events() {
     }
   };
 
-  // Deletar evento no backend
+  // Função para chamar a API de predição e buscar o fertilizante recomendado
+  const fetchPrediction = async () => {
+    try {
+      // Chama a API de predição sem dados do sensor
+      const response = await axios.post('http://localhost:8000/predict');
+      setPredictedFertilizer(response.data);
+      console.log('Predição de fertilizante:', response.data);
+    } catch (error) {
+      console.error('Erro ao buscar predição:', error);
+    }
+  };
+
+  // Função para deletar evento no backend
   const handleDelete = async (id) => {
     try {
       await axios.delete(`http://localhost:3001/events/${id}`);
@@ -28,8 +41,14 @@ function Events() {
     }
   };
 
+  // Chama as funções quando o componente for montado
   useEffect(() => {
-    fetchEvents();
+    const fetchData = async () => {
+      await fetchPrediction(); // Chamar a API de predição
+      fetchEvents(); // Carregar eventos
+    };
+
+    fetchData(); // Executa a função assíncrona
   }, []);
 
   return (
@@ -45,16 +64,12 @@ function Events() {
               {events.map((event) => (
                 <div
                   key={event.id}
-                  className={`alert-card ${
-                    event.type === 'critical' ? 'critical' : 'warning'
-                  }`}
+                  className={`alert-card ${event.type === 'critical' ? 'critical' : 'warning'}`}
                 >
                   {/* Ícone em uma div separada */}
                   <div className="alert-icon-container">
                     <i
-                      className={`fa-solid fa-exclamation-triangle alert-icon ${
-                        event.type === 'critical' ? 'critical' : 'warning'
-                      }`}
+                      className={`fa-solid fa-exclamation-triangle alert-icon ${event.type === 'critical' ? 'critical' : 'warning'}`}
                     ></i>
                   </div>
 
@@ -77,6 +92,15 @@ function Events() {
                 </div>
               ))}
             </div>
+
+            {/* Exibindo a predição do fertilizante */}
+            {predictedFertilizer && (
+              <div className="prediction-container">
+                <h3>Recomendação de Fertilizante:</h3>
+                <p><strong>Fertilizante:</strong> {predictedFertilizer['Predicted Fertilizer']}</p>
+                <p><strong>Mensagem:</strong> {predictedFertilizer['Message']}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

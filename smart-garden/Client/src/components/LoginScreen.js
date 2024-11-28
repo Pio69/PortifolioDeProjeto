@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import logo from '../assets/logo-final.png'; // Caminho para o logo
+import './styles.css'; // Estilos específicos da tela de login
 import './LoginScreen.css'; // Estilos específicos da tela de login
 
 function LoginScreen() {
@@ -91,15 +92,6 @@ function LoginScreen() {
 
                   {/* E-mail */}
                   <div className="input-group col-lg-12 mb-3">
-                    <div className="input-group-prepend">
-                      <span className="input-group-text bg-white px-4 border-md border-right-0">
-                        <i
-                          className="fa fa-envelope text-muted"
-                          alt="E-mail"
-                          aria-label="Ícone de envelope para o campo de e-mail"
-                        ></i>
-                      </span>
-                    </div>
                     <input
                       type="email"
                       name="email"
@@ -116,11 +108,6 @@ function LoginScreen() {
 
                   {/* Senha */}
                   <div className="input-group col-lg-12 mb-2">
-                    <div className="input-group-prepend">
-                      <span className="input-group-text bg-white px-4 border-md border-right-0">
-                        <i className="fa fa-lock text-muted" alt="Lock"></i>
-                      </span>
-                    </div>
                     <input
                       type={passwordVisible ? 'text' : 'password'}
                       name="password"
@@ -145,16 +132,6 @@ function LoginScreen() {
                     </button>
                   </div>
 
-                  {/* Esqueceu a senha */}
-                  <div
-                    className="text-right w-100"
-                    style={{ fontSize: '14px' }}
-                  >
-                    <a href="/forgot-password" className="text-primary ml-2 px-4">
-                      Esqueceu a senha?
-                    </a>
-                  </div>
-
                   {/* Botão de login */}
                   <div className="form-group col-lg-12 mx-auto mt-4">
                     <button
@@ -167,18 +144,6 @@ function LoginScreen() {
                     </button>
                   </div>
 
-                  {/* Não tem uma conta? */}
-                  <div
-                    className="text-center mb-auto without-account"
-                    style={{ fontSize: '15px', height: '3rem' }}
-                  >
-                    <p>
-                      Não tem uma conta?{' '}
-                      <a href="/register" className="text-primary ml-2">
-                        Cadastre-se
-                      </a>
-                    </p>
-                  </div>
                 </form>
               </div>
             </div>
