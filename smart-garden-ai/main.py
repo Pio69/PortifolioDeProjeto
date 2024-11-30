@@ -142,7 +142,7 @@ async def predict_fertilizer():
             desc = FERTILIZER_MESSAGES.get(predicted_fertilizer, "Fertilizer recommendation not found.")
 
             # Inserir no banco de dados
-            await insert_event(desc=predicted_fertilizer, level="info", gene_by_ia=1, device_id=device_id)
+            await insert_event(desc=desc, level="info", gene_by_ia=1, device_id=device_id)
 
         return {"message": "Predictions and events processed for all devices."}
     
