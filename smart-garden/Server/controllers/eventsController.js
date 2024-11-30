@@ -14,13 +14,15 @@ exports.getEvents = async (req, res) => {
   }
 };
 
-
-// Deletar evento
+// controllers/eventsController.js
 exports.deleteEvent = async (req, res) => {
-  const { id } = req.params;
-
+  const { desc, device_id } = req.params; // Espera parâmetros da URL
+  
   try {
-    const [result] = await db.query('DELETE FROM tb_events WHERE id = ?', [id]);
+    const [result] = await db.query(
+      'DELETE FROM tb_events WHERE `desc` = ? AND `device_id` = ?', 
+      [desc, device_id]
+    );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Evento não encontrado' });
@@ -32,3 +34,4 @@ exports.deleteEvent = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erro ao deletar evento' });
   }
 };
+
