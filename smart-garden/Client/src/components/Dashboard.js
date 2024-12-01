@@ -3,12 +3,13 @@ import axios from "axios";
 import { Line } from "@antv/g2plot";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
+import moment from "moment";
+
 import "./Dashboard.css";
 
 function Dashboard() {
   const [sensorsData, setSensorsData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
-  const [climateData, setClimateData] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -50,36 +51,40 @@ function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-
+  
       // Construir parâmetros de data para a requisição
       const params = {
         deviceId: deviceId,
         startDate: startDate ? `${startDate} 00:00:00` : undefined,
         endDate: endDate ? `${endDate} 23:59:59` : undefined,
       };
-
-      const [dashboardResponse, historyResponse, climateResponse] = await Promise.all([
+  
+      const [dashboardResponse, historyResponse] = await Promise.all([
         axios.get("http://localhost:3001/dashboard", { params }),
         axios.get("http://localhost:3001/measures/history", { params }),
-        axios.get("http://localhost:3001/climate", { params }),
       ]);
-
-      if (dashboardResponse.data.success && historyResponse.data.success && climateResponse.data.success) {
-        console.log(JSON.stringify(dashboardResponse.data.data))
+  
+      if (dashboardResponse.data.success && historyResponse.data.success) {
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
-        setClimateData(climateResponse.data.data);
         setLastUpdated(new Date());
       } else {
-        setError("Erro ao carregar dados.");
+        // Caso não tenha sucesso, redefinir para vazio
+        setSensorsData({});
+        setHistoryData([]);
+        setLastUpdated(new Date());
       }
     } catch (err) {
       console.error(err);
-      setError("Erro ao se conectar com o servidor.");
+      // Definir estados como vazios quando ocorrer erro
+      setSensorsData({});
+      setHistoryData([]);
+      setLastUpdated(new Date());
     } finally {
       setLoading(false);
     }
   };
+  
 
   const initializeCharts = () => {
     // Destruir instâncias anteriores dos gráficos, se existirem
@@ -96,7 +101,16 @@ function Dashboard() {
       npkChartInstance.current.destroy();
     }
   
-    if (historyData.length > 0 || climateData.length > 0) {
+    if (historyData.length > 0) {
+      // Função para calcular os valores min e max
+      const getMinMax = (data) => {
+        const values = data.map((item) => item.value);
+        return {
+          min: Math.min(...values),
+          max: Math.max(...values),
+        };
+      };
+  
       // Preparar dados para o gráfico de Temperatura e Umidade
       const temperatureHumidityData = [
         ...historyData.map((item) => ({
@@ -109,12 +123,10 @@ function Dashboard() {
           value: item.humidity,
           type: "Humidity",
         })),
-        ...climateData.map((item) => ({
-          date: item.recorded_at,
-          value: item.value,
-          type: item.sensor_type,
-        })),
       ];
+  
+      // Calculando min e max para o gráfico de Temperatura e Umidade
+      const { min: tempMin, max: tempMax } = getMinMax(temperatureHumidityData);
   
       // Preparar dados para o gráfico de pH
       const phData = historyData.map((item) => ({
@@ -123,6 +135,9 @@ function Dashboard() {
         type: "pH",
       }));
   
+      // Calculando min e max para o gráfico de pH
+      const { min: phMin, max: phMax } = getMinMax(phData);
+  
       // Preparar dados para o gráfico de NPK
       const npkData = historyData.flatMap((item) => [
         { date: item.created_at, value: item.nitrogen, type: "Nitrogen" },
@@ -130,12 +145,18 @@ function Dashboard() {
         { date: item.created_at, value: item.potassium, type: "Potassium" },
       ]);
   
+      // Calculando min e max para o gráfico de NPK
+      const { min: npkMin, max: npkMax } = getMinMax(npkData);
+  
       // Preparar dados para o gráfico de Umidade do Solo
       const soilMoistureData = historyData.map((item) => ({
         date: item.created_at,
         value: item.humidity,
         type: "Humidity",
       }));
+  
+      // Calculando min e max para o gráfico de Umidade do Solo
+      const { min: soilMin, max: soilMax } = getMinMax(soilMoistureData);
   
       // Inicializar o gráfico de Temperatura e Umidade
       if (temperatureChartRef.current) {
@@ -150,16 +171,14 @@ function Dashboard() {
             type: "time",
             label: {
               formatter: (text) => {
-                const date = new Date(text);
-                return `${date.getDate()}/${date.getMonth() + 1}/${date
-                  .getFullYear()
-                  .toString()
-                  .slice(-2)}`;
+                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
+                return date.isValid() ? date.format("DD/MM/YY") : text;
               },
             },
           },
           yAxis: {
-            tickInterval: 5,
+            min: tempMin,
+            max: tempMax,
             label: {
               formatter: (text) => `${Math.round(text)}`,
             },
@@ -171,7 +190,6 @@ function Dashboard() {
         });
         temperatureChartInstance.current.render();
       }
-
   
       // Inicializar o gráfico de pH
       if (phChartRef.current) {
@@ -189,12 +207,16 @@ function Dashboard() {
             type: "time",
             label: {
               formatter: (text) => {
-                const date = new Date(text);
-                return `${date.getDate()}/${date.getMonth() + 1}/${date
-                  .getFullYear()
-                  .toString()
-                  .slice(-2)}`;
+                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
+                return date.isValid() ? date.format("DD/MM/YY") : text;
               },
+            },
+          },
+          yAxis: {
+            min: phMin,
+            max: phMax,
+            label: {
+              formatter: (text) => `${Math.round(text)}`,
             },
           },
           tooltip: {
@@ -221,12 +243,16 @@ function Dashboard() {
             type: "time",
             label: {
               formatter: (text) => {
-                const date = new Date(text);
-                return `${date.getDate()}/${date.getMonth() + 1}/${date
-                  .getFullYear()
-                  .toString()
-                  .slice(-2)}`;
+                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
+                return date.isValid() ? date.format("DD/MM/YY") : text;
               },
+            },
+          },
+          yAxis: {
+            min: npkMin,
+            max: npkMax,
+            label: {
+              formatter: (text) => `${Math.round(text)}`,
             },
           },
           tooltip: {
@@ -253,12 +279,16 @@ function Dashboard() {
             type: "time",
             label: {
               formatter: (text) => {
-                const date = new Date(text);
-                return `${date.getDate()}/${date.getMonth() + 1}/${date
-                  .getFullYear()
-                  .toString()
-                  .slice(-2)}`;
+                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
+                return date.isValid() ? date.format("DD/MM/YY") : text;
               },
+            },
+          },
+          yAxis: {
+            min: soilMin,
+            max: soilMax,
+            label: {
+              formatter: (text) => `${Math.round(text)}`,
             },
           },
           tooltip: {
@@ -271,29 +301,41 @@ function Dashboard() {
     }
   };
   
+  
 
-  // Fetch devices ao montar o componente
-  useEffect(() => {
-    const fetchDevices = async () => {
-      try {
-        const devicesResponse = await axios.get("http://localhost:3001/devices");
-        if (devicesResponse.data.success) {
-          setDevices(devicesResponse.data.data);
-        } else {
-          setError("Erro ao carregar dispositivos.");
+// Atualize o useEffect que obtém os dispositivos
+useEffect(() => {
+  const fetchDevices = async () => {
+    try {
+      const devicesResponse = await axios.get("http://localhost:3001/devices");
+      if (devicesResponse.data.success) {
+        const devicesData = devicesResponse.data.data;
+        setDevices(devicesData);
+        if (devicesData.length > 0) {
+          setSelectedDevice(devicesData[0].id);
         }
-      } catch (err) {
-        console.error(err);
-        setError("Erro ao se conectar com o servidor.");
+      } else {
+        setError("Erro ao carregar dispositivos.");
       }
-    };
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao se conectar com o servidor.");
+    }
+  };
 
-    fetchDevices();
-  }, []);
+  fetchDevices();
+}, []);
 
-  // Inicializar gráficos quando historyData ou climateData mudarem
+// Novo useEffect para buscar dados quando um dispositivo for selecionado
+useEffect(() => {
+  if (selectedDevice) {
+    fetchData(selectedDevice);
+  }
+}, [selectedDevice]);
+
+  // Inicializar gráficos quando historyData mudarem
   useEffect(() => {
-    if (historyData.length > 0 || climateData.length > 0) {
+    if (historyData.length > 0 ) {
       initializeCharts();
     }
 
@@ -316,7 +358,7 @@ function Dashboard() {
         npkChartInstance.current = null;
       }
     };
-  }, [historyData, climateData]);
+  }, [historyData]);
 
   // Renderização condicional para loading e error
   if (loading) {
@@ -341,57 +383,61 @@ function Dashboard() {
       <div className="dashboard">
         <Sidebar />
         <div className="main-content">
-          <div className="device-selector">
-            <label htmlFor="device-dropdown" className="device-label">Dispositivo</label>
-            <select
-              id="device-dropdown"
-              value={selectedDevice}
-              onChange={(e) => {
-                const selectedDeviceId = e.target.value;
-                setSelectedDevice(selectedDeviceId);
-                if (selectedDeviceId) {
-                  fetchData(selectedDeviceId);
-                }
-              }}
-              className="device-dropdown"
-            >
-              <option value="">Selecione um dispositivo</option>
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.id} - {device.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="date-filter">
-            <label htmlFor="start-date" className="date-label">Data de Início:</label>
-            <input
-              type="date"
-              id="start-date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="date-input"
-            />
+          <h1 className="filter-title">Filtros</h1>
+          <hr className="title-divisor" />
+          <div className="filter-container">
+            <div className="device-selector">
+              <label htmlFor="device-dropdown" className="device-label">Dispositivo</label>
+              <select
+                id="device-dropdown"
+                value={selectedDevice}
+                onChange={(e) => {
+                  const selectedDeviceId = e.target.value;
+                  setSelectedDevice(selectedDeviceId);
+                }}
+                className="device-dropdown"
+              >
+                <option value="">Selecione um dispositivo</option>
+                {devices.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    {device.id} - {device.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <label htmlFor="end-date" className="date-label">Data de Fim:</label>
-            <input
-              type="date"
-              id="end-date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="date-input"
-            />
-
-            <button
-              onClick={() => {
-                if (selectedDevice) {
-                  fetchData(selectedDevice);
-                }
-              }}
-              className="filter-button"
-            >
-              Filtrar
-            </button>
+            <div className="date-filter">
+              <div className="date-input-container">
+                <label htmlFor="start-date" className="device-label">Data de Início:</label>
+                <input
+                  type="date"
+                  id="start-date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="date-input"
+                />
+              </div>
+              <div className="date-input-container">
+                <label htmlFor="end-date" className="device-label">Data de Fim:</label>
+                <input
+                  type="date"
+                  id="end-date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="date-input"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (selectedDevice) {
+                    fetchData(selectedDevice);
+                  }
+                }}
+                className="filter-button"
+              >
+                Filtrar
+              </button>
+            </div>
           </div>
 
           <hr className="title-divisor" />

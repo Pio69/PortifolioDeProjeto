@@ -204,3 +204,36 @@ body {
   margin: 0 auto;
   padding: 20px;
 }
+
+.filter-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px; /* Ajuste conforme necessário para espaçamento */
+  flex-wrap: wrap; /* Garantir que haja quebra para linhas menores */
+}
+
+.device-selector,
+.date-input-container,
+.filter-button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Espaço entre a label e o campo */
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* Ajuste conforme necessário para espaçamento entre filtros */
+}
+
+.filter-button {
+  align-self: flex-start; /* Mantém o botão alinhado ao topo dos campos */
+  margin-top: 24px; /* Ajustar para alinhar o botão com os campos de data */
+}
+
+.filter-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px; /* Espaçamento abaixo do título */
+  color: #333; /* Ajuste a cor conforme necessário */
+}

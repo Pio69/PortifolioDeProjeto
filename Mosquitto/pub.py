@@ -14,7 +14,7 @@ def publish_message():
         message = "{Temperature:22.5,Humidity:60,SoilMoisture:40,pH:6.8,NPKNitrogen:20,NPKPhosphorus:15,NPKPotassium:25}"
         
         
-        client.publish("measure/sensor/1", message)
+        client.publish("measure/sensor/7", message)
         print(f"Mensagem publicada: {message}")
         
         # Espera 60 segundos (1 minuto)
