@@ -5,24 +5,29 @@ from datetime import datetime
 
 # Função chamada quando uma mensagem é recebida
 def on_message(client, userdata, message):
+    topic = message.topic  # Exemplo: 'measure/sensor/DEVICE_ID'
+    payload = message.payload.decode('utf-8').strip()
+
+    if "info" in topic:
+        # Apenas imprime no console o payload recebido no tópico `/info`
+        print(f"Tópico {topic}: {payload}")
+        return
+
     db_connection = userdata  # Obter a conexão do banco de dados do userdata
-    topic = message.topic  # 'measure/sensor/DEVICE_ID'
+
     try:
-        device_id = int(topic.split('/')[-1])
+        device_id = int(topic.split('/')[-2])  # Extrair DEVICE_ID do tópico
     except ValueError as e:
         print(f"ID do dispositivo inválido: {e}")
         return
 
-    # Decodifica o payload recebido
-    payload = message.payload.decode('utf-8').strip()
-    
     try:
         # Tenta carregar o payload como JSON
         sensor_data = json.loads(payload)
     except json.JSONDecodeError as e:
         print(f"Erro ao parsear o JSON do payload: {e}")
         return
-    
+
     # Verificar se todos os campos obrigatórios estão presentes
     required_fields = [
         'Nitrogen', 'Phosphorus', 'Potassium', 'pH',
@@ -86,8 +91,9 @@ def subscribe_to_sensors():
     # Define o db_connection como userdata
     client.user_data_set(db_connection)
 
-    # Inscreve-se no tópico measure/sensor/+ (escuta todos os sensores)
-    client.subscribe("measure/sensor/+")
+    # Inscreve-se nos tópicos measure/sensor/+/measures e measure/sensor/+/info
+    client.subscribe("measure/sensor/+/measures")
+    client.subscribe("measure/sensor/+/info")
 
     # Loop para manter a conexão ativa e escutar as mensagens
     try:

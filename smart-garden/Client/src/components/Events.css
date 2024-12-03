@@ -83,3 +83,12 @@
 }
 
   /* EVENTS */
+
+  .alert-card {
+    align-items: flex-start; /* Alinha verticalmente os itens ao topo */
+  }
+  
+  .alert-text {
+    text-align: left; /* Garante o alinhamento do texto à esquerda */
+  }
+  

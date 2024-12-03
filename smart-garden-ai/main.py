@@ -1,151 +1,200 @@
-from fastapi import FastAPI, HTTPException
+import mysql.connector
+from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
 import joblib
-import asyncio
-import aiomysql
 import logging
+import httpx
 
 # Carregar o modelo salvo
-model = joblib.load("fertilizer_recommendation_model.pkl")
+model = joblib.load("fertilizer_classification_model_for_alface.pkl")
 
 # Inicializar o FastAPI
 app = FastAPI()
 
-# Configuração do banco de dados
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "admin",
-    "db": "smartlettuce",
-}
-
 # Dicionário de mensagens para os fertilizantes
 FERTILIZER_MESSAGES = {
-    "High-N Fertilizer": "Nitrogênio muito baixo, aplique fertilizantes ricos em Nitrogênio.",
-    "High-P Fertilizer": "Fósforo muito baixo, aplique fertilizantes ricos em Fósforo.",
-    "High-K Fertilizer": "Potássio muito baixo, aplique fertilizantes ricos em Potássio.",
-    "pH Adjuster": "pH fora da faixa ideal, ajuste com um regulador de pH.",
-    "EC Booster": "Condutividade elétrica baixa, aplique um booster de EC.",
-    "Balanced Fertilizer": "Os níveis do solo estão balanceados",
+    "Adicionar Nitrato de Amônio (NH₄NO₃)": "Nitrogênio muito baixo, aplique fertilizantes ricos em Nitrogênio.",
+    "Adicionar Superfosfato Simples": "Fósforo muito baixo, aplique fertilizantes ricos em Fósforo.",
+    "Adicionar Cloreto de Potássio (KCl)": "Potássio muito baixo, aplique fertilizantes ricos em Potássio.",
+    "Adicionar Enxofre Elementar": "pH fora da faixa ideal, ajuste com um regulador de pH.",
+    "Adicionar Calcário": "pH fora da faixa ideal, ajuste com um regulador de pH.",
+    "Não é necessário ajustar fertilizante": "Os níveis do solo estão balanceados",
 }
 
 # Configuração de logging para depuração
 logging.basicConfig(level=logging.INFO)
 
-# Conectar ao banco de dados e inserir um evento
-async def insert_event(desc: str, level: str, gene_by_ia: int, device_id: int):
-    try:
-        pool = await aiomysql.create_pool(**DB_CONFIG)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                # Alteração: Utilizando %s para todos os parâmetros
-                query = "INSERT INTO tb_events (`desc`, level, gene_by_ia, device_id) VALUES (%s, %s, %s, %s)"
-                try:
-                    await cur.execute(query, (desc, level, gene_by_ia, device_id))
-                    await conn.commit()
-                except aiomysql.MySQLError as e:
-                    # Captura e ignora o erro de duplicação de chave (pode ser ajustado conforme o tipo do erro)
-                    if "Duplicate entry" in str(e):
-                        logging.info(f"Evento duplicado para device_id {device_id} não inserido.")
-                    else:
-                        logging.error(f"Erro ao tentar inserir evento: {e}")
-                        raise HTTPException(status_code=500, detail="Erro ao inserir evento no banco de dados")
-        pool.close()
-        await pool.wait_closed()
-    except Exception as e:
-        logging.error(f"Erro ao conectar ao banco de dados para inserir evento: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao inserir evento no banco de dados")
-
-
-# Função para pegar todos os device_ids distintos da tabela tb_measures
-async def get_distinct_device_ids():
-    try:
-        pool = await aiomysql.create_pool(**DB_CONFIG)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                query = "SELECT DISTINCT device_id FROM tb_measures"
-                await cur.execute(query)
-                device_ids = await cur.fetchall()
-        return [device_id[0] for device_id in device_ids]
-    except Exception as e:
-        logging.error(f"Erro ao buscar device_ids: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao buscar device_ids")
-
-# Função para pegar o último registro de um device_id específico
-async def get_latest_measure_for_device(device_id: str):
-    try:
-        pool = await aiomysql.create_pool(**DB_CONFIG)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                query = """
-                    SELECT Nitrogen, Phosphorus, Potassium, pH, Conductivity, Temperature, Humidity 
-                    FROM tb_measures 
-                    WHERE device_id = %s 
-                    ORDER BY created_at DESC  # Corrigido para usar 'created_at' ao invés de 'timestamp'
-                    LIMIT 1
-                """
-                await cur.execute(query, (device_id,))
-                result = await cur.fetchone()
-        if result is None:
-            logging.warning(f"Nenhum registro encontrado para device_id: {device_id}")
-        return result
-    except Exception as e:
-        logging.error(f"Erro ao buscar medidas para device_id {device_id}: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao buscar medidas no banco de dados")
-
-
 # Função para fazer a predição com o modelo carregado
 def predict_fertilizer_model(input_data: pd.DataFrame):
-    # Utilizando o modelo carregado para prever
     prediction = model.predict(input_data)
     return prediction
 
+# Função para obter os dados de clima via API usando latitude e longitude
+async def get_weather_data(lat: float, lon: float, api_key: str):
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        
+    if response.status_code == 200:
+        weather_data = response.json()
+        # Extrair dados relevantes de clima
+        return {
+            "feels_like": weather_data["main"]["feels_like"],
+            "temp_min": weather_data["main"]["temp_min"],
+            "temp_max": weather_data["main"]["temp_max"],
+            "pressure": weather_data["main"]["pressure"],
+            "humidity": weather_data["main"]["humidity"]
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Erro ao consultar a API de clima")
+
+# Função para pegar os últimos registros de cada device_id da tabela tb_measures
+def get_latest_measure_data():
+    try:
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="admin",
+            database="smartlettuce"
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        # Consulta para pegar o último registro de cada device_id
+        query = """
+        SELECT * FROM tb_measures
+        WHERE (device_id, created_at) IN (
+            SELECT device_id, MAX(created_at)
+            FROM tb_measures
+            GROUP BY device_id
+        )
+        """
+        cursor.execute(query)
+        data = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        return data
+    except mysql.connector.Error as err:
+        logging.error(f"Erro ao consultar o banco de dados: {err}")
+        raise HTTPException(status_code=500, detail="Erro ao acessar o banco de dados")
+
+# Função para inserir dados na tabela tb_events
+def insert_event(data):
+    try:
+        # Conexão com o banco de dados MySQL
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="admin",
+            database="smartlettuce"
+        )
+        cursor = connection.cursor()
+
+        # Query para inserir dados na tabela tb_events com "INSERT IGNORE"
+        query = """
+        INSERT IGNORE INTO tb_events (gene_by_ia, device_id, `desc`, level)
+        VALUES (%s, %s, %s, %s)
+        """
+
+        # Concatenando a mensagem e o fertilizante previsto
+        message = data['message'] + ' - ' + data['predicted_fertilizer']
+
+        # Definindo os valores a serem inseridos
+        values = (1, data['device_id'], message, 'warning')
+
+        # Executando a query de inserção
+        cursor.execute(query, values)
+        connection.commit()
+
+        # Fechando a conexão
+        cursor.close()
+        connection.close()
+    except mysql.connector.Error as err:
+        logging.error(f"Erro ao inserir dados na tabela tb_events: {err}")
+        raise HTTPException(status_code=500, detail="Erro ao inserir no banco de dados")
+
+
+# Mapeamento das colunas do banco para as colunas esperadas pelo modelo
+COLUMN_MAPPING = {
+    'Nitrogen': 'Nitrogen (mg/kg)',
+    'Phosphorus': 'Phosphorus (mg/kg)',
+    'Potassium': 'Potassium (mg/kg)',
+    'pH': 'pH',
+    'Conductivity': 'Conductivity (us/cm)',
+    'Temperature': 'Temperature Soil (°C)',  # Renomear para 'Temperature Soil'
+    'Humidity': 'Humidity (%RH)',  # Renomear para 'Humidity (%RH)'
+    'Salinity': 'Salinity (mg/L)',  # Renomear para 'Salinity (mg/L)'
+    'TDS': 'TDS (mg/L)',  # Renomear para 'TDS (mg/L)'
+    'Conductivity factor': 'Conductivity factor (%)',  # Se houver essa coluna
+    'Salinity factor': 'Salinity factor (%)'  # Se houver essa coluna
+}
+
+# Função para renomear as colunas conforme o mapeamento
+def rename_columns(input_data):
+    return input_data.rename(columns=COLUMN_MAPPING)
+
 # Endpoint de predição
 @app.post("/predict")
-async def predict_fertilizer():
+async def predict_fertilizer(lat: float = Query(...), lon: float = Query(...), api_key: str = Query(...)):
     try:
-        # Buscar todos os device_ids distintos
-        device_ids = await get_distinct_device_ids()
+        # Obter os dados de clima usando latitude e longitude
+        weather_data = await get_weather_data(lat, lon, api_key)
 
-        if not device_ids:
-            return {"error": "No devices found in tb_measures."}
+        # Pegar os últimos registros de cada device_id
+        measure_data = get_latest_measure_data()
 
-        # Iterar sobre todos os device_ids para realizar a predição
-        for device_id in device_ids:
-            # Buscar o último registro de cada device_id
-            measure_data = await get_latest_measure_for_device(device_id)
+        print(measure_data)
 
-            if not measure_data:
-                continue
+        # Iterar sobre os dados de medida (para cada dispositivo)
+        for record in measure_data:
+            # Criar um DataFrame com os dados para a predição
+            input_data = pd.DataFrame([record])
 
-            # Desestruturar os dados do registro
-            nitrogen, phosphorus, potassium, ph, conductivity, temperature, humidity = measure_data
+            # Renomear as colunas para que correspondam aos nomes esperados pelo modelo
+            input_data = rename_columns(input_data)
 
-            # Criar um DataFrame com os dados do registro
-            input_data = pd.DataFrame([{
-                "Nitrogen (ppm)": nitrogen,
-                "Phosphorus (ppm)": phosphorus,
-                "Potassium (ppm)": potassium,
-                "pH": ph,
-                "Conductivity (dS/m)": conductivity,
-                "Temperature (°C)": temperature,
-                "Humidity (%)": humidity
-            }])
+            # Colunas esperadas para a predição
+            expected_columns = [
+                "Nitrogen (mg/kg)", "Phosphorus (mg/kg)", "Potassium (mg/kg)", "pH", 
+                "Conductivity (us/cm)", "Temperature Soil (°C)", "Humidity (%RH)", 
+                "Salinity (mg/L)", "TDS (mg/L)", "Conductivity factor (%)", "Salinity factor (%)"
+            ]
+            
+            # Verificar se todas as colunas necessárias estão presentes
+            missing_columns = [col for col in expected_columns if col not in input_data.columns]
+            if missing_columns:
+                logging.warning(f"Registro do device_id {record['device_id']} ignorado. Faltando as colunas: {', '.join(missing_columns)}")
+                continue  # Ignorar o registro e passar para o próximo
 
-            # Fazer a predição
+            # Adicionar os dados de clima ao input_data
+            input_data["feels_like"] = weather_data["feels_like"]
+            input_data["temp_min"] = weather_data["temp_min"]
+            input_data["temp_max"] = weather_data["temp_max"]
+            input_data["pressure"] = weather_data["pressure"]
+            input_data["humidity"] = weather_data["humidity"]
+
+            # Realizando a predição com o modelo
             prediction = predict_fertilizer_model(input_data)
 
             # Obter o fertilizante previsto
-            predicted_fertilizer = prediction[0]  # Considerando que a predição retorna uma lista ou array
+            predicted_fertilizer = prediction[0]
 
             # Obter a mensagem correspondente ao fertilizante
             desc = FERTILIZER_MESSAGES.get(predicted_fertilizer, "Fertilizer recommendation not found.")
 
-            # Inserir no banco de dados
-            await insert_event(desc=desc, level="info", gene_by_ia=1, device_id=device_id)
+            # Criar o dicionário com os dados para o insert
+            event_data = {
+                "device_id": record['device_id'],
+                "predicted_fertilizer": predicted_fertilizer,
+                "message": desc
+            }
 
-        return {"message": "Predictions and events processed for all devices."}
-    
+            # Inserir os dados na tabela tb_events
+            insert_event(event_data)
+
+        return {"message": "Predição realizada com sucesso para os dispositivos válidos."}
+
     except Exception as e:
         logging.error(f"Erro na predição: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao processar predições")
+        raise HTTPException(status_code=500, detail="Erro ao processar a predição")

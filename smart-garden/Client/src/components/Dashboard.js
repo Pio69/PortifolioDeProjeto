@@ -27,26 +27,6 @@ function Dashboard() {
   const phChartInstance = useRef(null);
   const npkChartInstance = useRef(null);
 
-  // Função para calcular o tempo desde a última atualização
-  const getTimeAgo = () => {
-    const now = new Date();
-    const diff = now - lastUpdated;
-    const diffSeconds = Math.floor(diff / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) {
-      return `Atualizado há ${diffDays} dia${diffDays > 1 ? "s" : ""}`;
-    } else if (diffHours > 0) {
-      return `Atualizado há ${diffHours} hora${diffHours > 1 ? "s" : ""}`;
-    } else if (diffMinutes > 0) {
-      return `Atualizado há ${diffMinutes} minuto${diffMinutes > 1 ? "s" : ""}`;
-    } else {
-      return "Atualizado agora mesmo";
-    }
-  };
-
   const fetchData = async (deviceId) => {
     try {
       setLoading(true);
@@ -449,27 +429,21 @@ useEffect(() => {
                   <p className="stat-value">
                     {sensorsData.Temperature !== undefined ? `${sensorsData.Temperature}°C` : "--"}
                   </p>
-                  <div className="last-updated">
-                    <span>{getTimeAgo()}</span>
-                  </div>
+                  
                 </div>
                 <div className="stat-card">
                   <h3 className="stat-title">Umidade</h3>
                   <p className="stat-value">
                     {sensorsData.Humidity !== undefined ? `${sensorsData.Humidity}%` : "--"}
                   </p>
-                  <div className="last-updated">
-                    <span>{getTimeAgo()}</span>
-                  </div>
+                  
                 </div>
                 <div className="stat-card">
                   <h3 className="stat-title">pH</h3>
                   <p className="stat-value">
                     {sensorsData.pH !== undefined ? sensorsData.pH : "--"}
                   </p>
-                  <div className="last-updated">
-                    <span>{getTimeAgo()}</span>
-                  </div>
+                  
                 </div>
                 <div className="stat-card">
                   <h3 className="stat-title">NPK</h3>
@@ -480,9 +454,7 @@ useEffect(() => {
                       ? `${sensorsData.Nitrogen}-${sensorsData.Phosphorus}-${sensorsData.Potassium}`
                       : "--"}
                   </p>
-                  <div className="last-updated">
-                    <span>{getTimeAgo()}</span>
-                  </div>
+                  
                 </div>
               </>
             )}
@@ -494,30 +466,18 @@ useEffect(() => {
             <div className="chart-container">
               <h3 className="chart-title">Temperatura e Umidade do Ar</h3>
               <div ref={temperatureChartRef} className="chart"></div>
-              <div className="last-updated">
-                <span>{getTimeAgo()}</span>
-              </div>
             </div>
             <div className="chart-container">
               <h3 className="chart-title">Umidade do Solo</h3>
               <div ref={soilMoistureChartRef} className="chart"></div>
-              <div className="last-updated">
-                <span>{getTimeAgo()}</span>
-              </div>
             </div>
             <div className="chart-container">
               <h3 className="chart-title">Níveis de pH</h3>
               <div ref={phChartRef} className="chart"></div>
-              <div className="last-updated">
-                <span>{getTimeAgo()}</span>
-              </div>
             </div>
             <div className="chart-container">
               <h3 className="chart-title">Níveis de NPK</h3>
               <div ref={npkChartRef} className="chart"></div>
-              <div className="last-updated">
-                <span>{getTimeAgo()}</span>
-              </div>
             </div>
           </div>
         </div>
