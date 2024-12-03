@@ -20,6 +20,7 @@ tds = np.random.randint(200, 500, n_samples)
 conductivity_factor = np.random.uniform(0.0, 10.0, n_samples)
 salinity_factor = np.random.uniform(0.0, 10.0, n_samples)
 feels_like = np.random.uniform(20, 30, n_samples)
+temp = np.random.uniform(18, 30, n_samples)
 temp_min = np.random.uniform(20, 25, n_samples)
 temp_max = np.random.uniform(25, 30, n_samples)
 pressure = np.random.randint(1000, 1025, n_samples)
@@ -51,9 +52,10 @@ data = {
     'Humidity (%RH)': humidity_soil,
     'Salinity (mg/L)': salinity,
     'TDS (mg/L)': tds,
-    'Conductivity factor (%)': conductivity_factor,
-    'Salinity factor (%)': salinity_factor,
+    'Conductivity factor': conductivity_factor,
+    'Salinity factor': salinity_factor,
     'feels_like': feels_like,
+    'temp': temp,
     'temp_min': temp_min,
     'temp_max': temp_max,
     'pressure': pressure,
