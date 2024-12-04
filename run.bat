@@ -11,7 +11,7 @@ start cmd /k "npm start"
 
 echo Iniciando Smart Garden AI...
 cd /d "%~dp0smart-garden-ai"
-start cmd /k "python main.py"
+start cmd /k "uvicorn main:app --reload"
 
 echo Iniciando Mosquitto Subscriber...
 cd /d "%~dp0Mosquitto"

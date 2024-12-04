@@ -97,7 +97,7 @@
 
 .date-input,
 .filter-button,
-.device-dropdown {
+.device-dropdown2 {
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -112,7 +112,7 @@
 
 .date-input:focus,
 .filter-button:focus,
-.device-dropdown:focus {
+.device-dropdown2:focus {
   border-color: #3498db;
   box-shadow: 0 0 6px rgba(52, 152, 219, 0.4); /* Azul no foco */
 }
@@ -144,11 +144,6 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px; /* Espaço entre o label e o dropdown */
-}
-
-.device-dropdown {
-  width: 100%;
-  max-width: 350px;
 }
 
 /* Títulos e Seções */

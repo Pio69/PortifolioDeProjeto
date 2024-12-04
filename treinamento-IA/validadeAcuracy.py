@@ -2,13 +2,13 @@ import pandas as pd
 from pycaret.classification import *
 
 # Carregar o dataset para teste
-df_test = pd.read_csv('fertilizer_recommendations_alface.csv')
+df_test = pd.read_csv('extended_simulated_fertilizer_recommendations.csv')
 
 # Excluir a coluna 'Recommended Fertilizer' para que o modelo faça a previsão
 df_test_without_fertilizer = df_test.drop(columns=['Recommended Fertilizer'])
 
 # Carregar o modelo treinado salvo
-model = load_model('fertilizer_classification_model_for_alface')
+model = load_model('fertilizer_classification_model')
 
 # Fazer previsões com o modelo treinado
 predictions = predict_model(model, data=df_test_without_fertilizer)

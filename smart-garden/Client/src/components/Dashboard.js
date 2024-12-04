@@ -367,15 +367,15 @@ useEffect(() => {
           <hr className="title-divisor" />
           <div className="filter-container">
             <div className="device-selector">
-              <label htmlFor="device-dropdown" className="device-label">Dispositivo</label>
+              <label htmlFor="device-dropdown2" className="device-label">Dispositivo</label>
               <select
-                id="device-dropdown"
+                id="device-dropdown2"
                 value={selectedDevice}
                 onChange={(e) => {
                   const selectedDeviceId = e.target.value;
                   setSelectedDevice(selectedDeviceId);
                 }}
-                className="device-dropdown"
+                className="device-dropdown2"
               >
                 <option value="">Selecione um dispositivo</option>
                 {devices.map((device) => (

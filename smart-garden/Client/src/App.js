@@ -2,8 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './components/LoginScreen';
 import RegisterScreen from './components/RegisterScreen';
-import ForgotPasswordScreen from './components/ForgotPasswordScreen';
-import ResetPasswordScreen from './components/ResetPasswordScreen';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
 import Events from './components/Events'; // Importe o componente Events
@@ -24,8 +22,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<LoginScreen />} />
                 <Route path="/register" element={<RegisterScreen />} />
-                <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-                <Route path="/reset-password" element={<ResetPasswordScreen />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} /> {/* Nova Rota */}

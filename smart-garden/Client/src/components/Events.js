@@ -2,53 +2,80 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import './styles.css';
 import './Events.css';
 
 function Events() {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [predictedFertilizer, setPredictedFertilizer] = useState(null);
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Função para buscar eventos do backend
-  const fetchEvents = async () => {
+  const fetchEvents = async (id = null) => {
+    setIsLoading(true);
+    setError('');
     try {
-      const response = await axios.get('http://localhost:3001/events');
+      const url = id ? `http://localhost:3001/events/${id}` : 'http://localhost:3001/events';
+      const response = await axios.get(url);
       setEvents(response.data.data);
+      setFilteredEvents(response.data.data);
     } catch (error) {
-      console.error('Erro ao buscar eventos:', error);
+      setError('Erro ao buscar eventos. Tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Função para chamar a API de predição e buscar o fertilizante recomendado
+  const fetchDevices = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/devices');
+      if (response.data.success) {
+        setDevices(response.data.data);
+      } else {
+        console.error('Erro ao carregar dispositivos');
+      }
+    } catch (error) {
+      console.error('Erro ao se conectar com o servidor:', error);
+    }
+  };
+
   const fetchPrediction = async () => {
     try {
-      // Chama a API de predição sem dados do sensor
-      const response = await axios.post('http://localhost:8000/predict');
+      const response = await axios.post('http://localhost:8000/predict?api_key=6d2a222c0a4cb9354b52687ceb0ddf1f');
       setPredictedFertilizer(response.data);
-      console.log('Predição de fertilizante:', response.data);
     } catch (error) {
-      console.error('Erro ao buscar predição:', error);
+      setError('Erro ao buscar predição. Tente novamente.');
     }
   };
 
-  // Função para deletar evento no backend
-  const handleDelete = async (id) => {
+  const handleDelete = async (alertMessage) => {
+    const confirmDelete = window.confirm(`Você realmente deseja deletar o evento "${alertMessage}"?`);
+    if (!confirmDelete) return;
+
     try {
-      await axios.delete(`http://localhost:3001/events/${id}`);
-      setEvents(events.filter((event) => event.id !== id));
+      await axios.delete(`http://localhost:3001/events/${alertMessage}`);
+      setEvents(events.filter((event) => event.alertMessage !== alertMessage));
+      setFilteredEvents(filteredEvents.filter((event) => event.alertMessage !== alertMessage));
     } catch (error) {
-      console.error('Erro ao deletar evento:', error);
+      setError('Erro ao deletar evento. Tente novamente.');
     }
   };
 
-  // Chama as funções quando o componente for montado
+  const handleFilterChange = (e) => {
+    const value = e.target.value;
+    setSelectedDevice(value);
+    setFilteredEvents(events.filter((event) => String(event.device_id).includes(value)));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      await fetchPrediction(); // Chamar a API de predição
-      fetchEvents(); // Carregar eventos
+      await fetchPrediction();
+      fetchEvents();
+      fetchDevices();
     };
-
-    fetchData(); // Executa a função assíncrona
+    fetchData();
   }, []);
 
   return (
@@ -60,31 +87,42 @@ function Events() {
           <div className="content-container">
             <h1>Eventos</h1>
             <hr className="title-divider" />
+            <div className="filter-container2">
+              <label htmlFor="device-dropdown">Filtros:</label>
+              <select id="device-dropdown" value={selectedDevice} onChange={handleFilterChange}>
+                <option value="">Selecione um dispositivo</option>
+                {devices.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    {device.id} - {device.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <hr className="title-divider" />
+            {isLoading && <p>Carregando...</p>}
+            {error && <p className="error-message">{error}</p>}
             <div className="events-container">
-              {events.map((event) => (
+              {filteredEvents.map((event) => (
                 <div
                   key={event.id}
                   className={`alert-card ${event.type === 'critical' ? 'critical' : 'warning'}`}
                 >
-                  {/* Ícone em uma div separada */}
                   <div className="alert-icon-container">
                     <i
                       className={`fa-solid fa-exclamation-triangle alert-icon ${event.type === 'critical' ? 'critical' : 'warning'}`}
                     ></i>
                   </div>
-
-                  {/* Texto em uma div separada */}
                   <div className="alert-text-container">
                     <span className="alert-message">{event.alertMessage}</span>
-                    {event.gene_by_ia === 1 && (
-                      <div className="generated-by-ai">Gerado por IA</div>
-                    )}
+                    {event.gene_by_ia === 1 && <div className="generated-by-ai">Gerado por IA</div>}
+                    <div className="event-details">
+                      <p><strong>Device:</strong> {event.device_id}</p>
+                      <p><strong>Data de Criação:</strong> {event.created_at ? new Date(event.created_at).toLocaleString() : 'Data indisponível'}</p>
+                    </div>
                   </div>
-
-                  {/* Botão de deletar */}
                   <button
                     className="delete-button"
-                    onClick={() => handleDelete(event.id)}
+                    onClick={() => handleDelete(event.alertMessage)}
                     aria-label="Deletar alerta"
                   >
                     <i className="fa-solid fa-trash"></i>
@@ -92,8 +130,6 @@ function Events() {
                 </div>
               ))}
             </div>
-
-            {/* Exibindo a predição do fertilizante */}
             {predictedFertilizer && (
               <div className="prediction-container">
                 <h3>Recomendação de Fertilizante:</h3>

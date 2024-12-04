@@ -1,94 +1,138 @@
+/* Events.css */
 
-  /* EVENTS */
-  .content-container {
-    margin-top: 20px;
-  }
-  
-  .title-divider {
-    border: 0;
-    border-top: 2px solid #e0e0e0;
-    margin: 20px 0;
-  }
-  
-  .events-container {
-    margin-top: 20px;
-  }
-  
-  /* Alert Cards */
-.alert-card {
-  background: #ffffff;
+/* Estilo geral para o contêiner principal dos eventos */
+.events-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Cartão de alerta */
+.alert-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-left: 5px solid;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  transition: transform 0.2s ease-in-out;
+  border-left: 8px solid;
 }
 
-.alert-card.critical {
-  border-left-color: #d9534f; /* Vermelho para eventos críticos */
+.alert-card:hover {
+  transform: translateY(-5px);
 }
 
-.alert-card.warning {
-  border-left-color: #f0ad4e; /* Amarelo para eventos de aviso */
+/* Estilo para alertas críticos e de aviso */
+.critical {
+  border-left-color: #e74c3c;
 }
 
-/* Ícones */
+.warning {
+  border-left-color: #f39c12;
+}
+
+/* Contêiner do ícone de alerta */
+.alert-icon-container {
+  padding-right: 15px;
+  display: flex;
+  align-items: center;
+}
+
 .alert-icon {
-  font-size: 24px;
+  font-size: 28px;
+  color: #e67e22;
 }
 
-.alert-icon.critical {
-  color: #d9534f; /* Vermelho */
-}
-
-.alert-icon.warning {
-  color: #f0ad4e; /* Amarelo */
-}
-
-/* Texto */
-.alert-text {
-  flex-grow: 1;
-  margin-left: 15px;
+/* Contêiner do texto de alerta */
+.alert-text-container {
+  flex: 1;
 }
 
 .alert-message {
-  font-size: 16px;
-  color: #333;
+  font-weight: bold;
+  font-size: 18px;
 }
 
 .generated-by-ai {
-  background: #e0e0e0;
-  border-radius: 15px;
-  padding: 5px 10px;
-  font-size: 12px;
-  color: #555;
+  font-size: 13px;
+  color: #95a5a6;
   margin-top: 5px;
+}
+
+/* Detalhes do evento */
+.event-details {
+  margin-top: 10px;
+}
+
+.event-details p {
+  margin: 5px 0;
 }
 
 /* Botão de deletar */
 .delete-button {
-  background: none;
+  background: transparent;
   border: none;
+  color: #e74c3c;
   cursor: pointer;
-  font-size: 20px;
-  color: #333;
-  transition: color 0.3s ease;
+  font-size: 24px;
+  transition: color 0.2s ease-in-out;
 }
 
 .delete-button:hover {
-  color: #d9534f;
+  color: #c0392b;
 }
 
-  /* EVENTS */
+/* Contêiner de predição */
+.prediction-container {
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 
+.prediction-container h3 {
+  margin-bottom: 15px;
+}
+
+#device-dropdown {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  color: #333;
+  width: 100%;
+  margin-left: 10px;
+  max-width: 300px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#device-dropdown:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 6px rgba(52, 152, 219, 0.4); /* Azul no foco */
+}
+
+/* Contêiner de filtro - alinhamento vertical */
+#filter-container2 {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Ajustes adicionais para layout responsivo */
+@media (max-width: 768px) {
   .alert-card {
-    align-items: flex-start; /* Alinha verticalmente os itens ao topo */
+    flex-direction: column;
+    align-items: flex-start;
   }
-  
-  .alert-text {
-    text-align: left; /* Garante o alinhamento do texto à esquerda */
+
+  .alert-icon-container {
+    padding-bottom: 10px;
   }
-  
+}
