@@ -16,7 +16,14 @@ function DeviceRegistration() {
   const [newLat, setNewLat] = useState('');
   const [newLon, setNewLon] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false); // Modal de confirmação
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  // Recuperar o user_id do localStorage
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('user_id');
+    setUserId(storedUserId);
+  }, []);
 
   // Buscar dispositivos do backend
   const fetchDevices = async () => {
@@ -31,24 +38,26 @@ function DeviceRegistration() {
   // Adicionar ou atualizar dispositivo
   const handleAddDevice = async () => {
     try {
-      if (newDevice.trim() && newLat.trim() && newLon.trim()) {
+      if (newDevice.trim() && newLat.trim() && newLon.trim() && userId) {
         if (currentDevice) {
-          // Atualizar dispositivo existente
           await axios.put(`http://localhost:3001/devices/${currentDevice.id}`, {
             name: newDevice,
             lat: newLat,
             lon: newLon,
+            user_id: userId,
           });
         } else {
-          // Adicionar novo dispositivo
           await axios.post('http://localhost:3001/devices', {
             name: newDevice,
             lat: newLat,
             lon: newLon,
+            user_id: userId,
           });
         }
         setShowModal(false);
-        fetchDevices(); // Atualizar a lista de dispositivos
+        fetchDevices();
+      } else {
+        alert('Todos os campos e o ID do usuário são obrigatórios.');
       }
     } catch (error) {
       console.error('Erro ao adicionar ou atualizar dispositivo:', error);
@@ -58,7 +67,7 @@ function DeviceRegistration() {
   // Confirmar exclusão de dispositivo
   const confirmDeleteDevice = (device) => {
     setCurrentDevice(device);
-    setShowConfirmModal(true); // Abre o modal de confirmação
+    setShowConfirmModal(true);
   };
 
   // Excluir dispositivo
@@ -66,9 +75,9 @@ function DeviceRegistration() {
     try {
       if (currentDevice) {
         await axios.delete(`http://localhost:3001/devices/${currentDevice.id}`);
-        fetchDevices(); // Atualizar a lista de dispositivos
-        setShowConfirmModal(false); // Fecha o modal de confirmação
-        setCurrentDevice(null); // Limpa o dispositivo atual
+        fetchDevices();
+        setShowConfirmModal(false);
+        setCurrentDevice(null);
       }
     } catch (error) {
       console.error('Erro ao excluir dispositivo:', error);
@@ -86,7 +95,7 @@ function DeviceRegistration() {
         <Sidebar />
         <div className="main-content p-4">
           <div className="container">
-            <h1 className="mb-4">Cadastro de Dispositivos</h1>
+          <h1 className="filter-title">Cadastro de Dispositivos</h1>
             <hr className="title-divider" />
             <div className="card">
               <div className="card-body">
@@ -158,25 +167,37 @@ function DeviceRegistration() {
           <Modal.Title>{currentDevice ? 'Editar Dispositivo' : 'Adicionar Novo Dispositivo'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="input-group mb-3">
+          <div className="form-group mb-3">
+            <label htmlFor="device-name" className="form-label">Nome do Dispositivo</label>
             <input
               type="text"
-              className="form-control mb-2"
-              placeholder="Nome do dispositivo"
+              id="device-name"
+              className="form-control"
+              placeholder="Digite o nome do dispositivo"
               value={newDevice}
               onChange={(e) => setNewDevice(e.target.value)}
             />
+          </div>
+
+          <div className="form-group mb-3">
+            <label htmlFor="device-lat" className="form-label">Latitude</label>
             <input
               type="text"
-              className="form-control mb-2"
-              placeholder="Latitude"
+              id="device-lat"
+              className="form-control"
+              placeholder="Digite a latitude"
               value={newLat}
               onChange={(e) => setNewLat(e.target.value)}
             />
+          </div>
+
+          <div className="form-group mb-3">
+            <label htmlFor="device-lon" className="form-label">Longitude</label>
             <input
               type="text"
+              id="device-lon"
               className="form-control"
-              placeholder="Longitude"
+              placeholder="Digite a longitude"
               value={newLon}
               onChange={(e) => setNewLon(e.target.value)}
             />
@@ -204,7 +225,7 @@ function DeviceRegistration() {
           <Button className="custom-btn-secondary" onClick={() => setShowConfirmModal(false)}>
             Cancelar
           </Button>
-          <Button className="custom-btn-danger" onClick={handleDeleteDevice}>
+          <Button className="custom-btn-primary" onClick={handleDeleteDevice}>
             Excluir
           </Button>
         </Modal.Footer>

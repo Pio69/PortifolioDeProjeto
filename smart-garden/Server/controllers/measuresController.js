@@ -21,12 +21,12 @@ exports.getMeasures = async (req, res) => {
     // Adicionar filtro por intervalo de datas, se ambos presentes
     if (startDate && endDate) {
       const condition = deviceId ? " AND" : " WHERE";
-      query += `${condition} created_at BETWEEN ? AND ?`;
+      query += `${condition} created_at_mili BETWEEN ? AND ?`;
       queryParams.push(startDate, endDate);
     }
 
     // Ordenar resultados por data de criação
-    query += " ORDER BY created_at ASC";
+    query += " ORDER BY created_at_mili ASC";
 
     // Executar a consulta
     const [rows] = await db.query(query, queryParams);
@@ -44,7 +44,6 @@ exports.getMeasures = async (req, res) => {
   }
 };
 
-
 exports.getHistory = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
 
@@ -55,34 +54,39 @@ exports.getHistory = async (req, res) => {
 
     let query = `
       SELECT 
-        Nitrogen AS nitrogen,
-        Phosphorus AS phosphorus,
-        Potassium AS potassium,
-        pH AS ph,
-        Conductivity AS conductivity,
-        Temperature AS temperature,
-        Humidity AS humidity,
-        created_at,
+        Nitrogen,
+        Phosphorus,
+        Potassium,
+        pH,
+        Conductivity,
+        Temperature,
+        Humidity,
+        Salinity,
+        TDS,
+        created_at_mili,
         device_id
       FROM 
         tb_measures
-      ${deviceId ? "WHERE device_id = ?" : ""}
+      WHERE 1=1
     `;
 
-    const queryParams = deviceId ? [deviceId] : [];
+    const queryParams = [];
 
-    // Adicionar filtro de intervalo de datas se startDate e endDate forem passados
+    if (deviceId) {
+      query += " AND device_id = ?";
+      queryParams.push(deviceId);
+    }
 
-    console.log("Query executada:" + startDate + " " +  endDate);
     if (startDate && endDate) {
-      query += deviceId ? " AND" : "WHERE";
-      query += " created_at BETWEEN ? AND ?";
+      query += " AND created_at_mili BETWEEN ? AND ?";
       queryParams.push(startDate, endDate);
     }
 
-    query += " AND created_at IS NOT NULL ORDER BY created_at ASC";
+    // Garantir que o created_at_mili não seja nulo e ordenar por data
+    query += " AND created_at_mili IS NOT NULL ORDER BY created_at_mili ASC";
 
-    console.log("Query executada:", query);
+    console.log("Query executada:", query, "Params:", queryParams);
+
     const [rows] = await db.query(query, queryParams);
 
     if (rows.length === 0) {

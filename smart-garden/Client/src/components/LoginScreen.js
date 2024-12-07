@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import logo from '../assets/logo-final.png'; // Caminho para o logo
-import './styles.css'; // Estilos específicos da tela de login
+//import './styles.css'; // Estilos específicos da tela de login
 import './LoginScreen.css'; // Estilos específicos da tela de login
 
 function LoginScreen() {
@@ -15,15 +15,18 @@ function LoginScreen() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     try {
       // Enviar requisição para o endpoint de login
       const response = await axios.post('http://localhost:3001/auth/login', formData);
 
+      console.log(response);
+  
       if (response.data.success) {
-        // Armazenar o token JWT (use localStorage ou cookies seguros em produção)
+        // Armazenar o token JWT e o user_id no localStorage
         localStorage.setItem('token', response.data.token);
-
+        localStorage.setItem('user_id', response.data.user_id); // Armazena o user_id
+  
         // Redirecionar para o dashboard
         navigate('/dashboard');
       } else {
@@ -31,14 +34,10 @@ function LoginScreen() {
         setResponseError(response.data.msg);
       }
     } catch (error) {
-
       console.error("Erro ao fazer login:", error);
-      console.log("Mensagem de erro:", responseError);
-
-
+  
       // Tratar erros de requisição
       if (error.response) {
-        // Erros retornados pelo servidor
         if (error.response.status === 401) {
           setResponseError('Email ou senha incorretos. Por favor, tente novamente.');
         } else if (error.response.status === 404) {
@@ -47,11 +46,11 @@ function LoginScreen() {
           setResponseError(error.response.data.msg || 'Erro ao fazer login');
         }
       } else {
-        // Erros de rede ou outros
         setResponseError('Erro de conexão com o servidor. Verifique sua conexão e tente novamente.');
       }
     }
   };
+  
 
   return (
     <div className="container-fluid d-flex flex-row p-0 half">
@@ -96,8 +95,7 @@ function LoginScreen() {
                       type="email"
                       name="email"
                       placeholder="E-mail"
-                      className="form-control bg-white border-left-0 border-md"
-                      autoComplete="off"
+                      className="form-control bg-white border-md"
                       required
                       value={formData.email}
                       onChange={(e) =>
@@ -112,7 +110,7 @@ function LoginScreen() {
                       type={passwordVisible ? 'text' : 'password'}
                       name="password"
                       placeholder="Senha"
-                      className="form-control bg-white border-left-0 border-md password"
+                      className="form-control bg-white border-md password"
                       autoComplete="on"
                       required
                       value={formData.password}

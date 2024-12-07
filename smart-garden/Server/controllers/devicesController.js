@@ -15,20 +15,25 @@ exports.getDevices = async (req, res) => {
 
 // Adicionar novo dispositivo
 exports.addDevice = async (req, res) => {
-  const { name, lat, lon } = req.body;
+  const { name, lat, lon, user_id } = req.body;
 
   try {
-    if (!name || !lat || !lon) {
+    if (!name || !lat || !lon || !user_id) {
       return res.status(400).json({ success: false, message: "Todos os campos são obrigatórios" });
     }
 
-    await db.query("INSERT INTO tb_devices (name, lat, lon) VALUES (?, ?, ?)", [name, lat, lon]);
+    await db.query(
+      "INSERT INTO tb_devices (name, lat, lon, user_id) VALUES (?, ?, ?, ?)",
+      [name, lat, lon, user_id]
+    );
+
     res.status(201).json({ success: true, message: "Dispositivo adicionado com sucesso" });
   } catch (error) {
     console.error("Erro ao adicionar dispositivo:", error);
     res.status(500).json({ success: false, message: "Erro ao adicionar dispositivo" });
   }
 };
+
 
 // Atualizar dispositivo
 exports.updateDevice = async (req, res) => {

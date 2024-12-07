@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Line } from "@antv/g2plot";
+import { Area } from "@antv/g2plot";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTemperatureHigh,
+  faDroplet,
+  faFlask,
+  faVial,
+  faWater,
+  faMagnifyingGlassChart,
+} from "@fortawesome/free-solid-svg-icons";
+
+
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import moment from "moment";
-
 import "./Dashboard.css";
 
 function Dashboard() {
@@ -18,45 +29,80 @@ function Dashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const temperatureChartRef = useRef(null);
-  const soilMoistureChartRef = useRef(null);
-  const phChartRef = useRef(null);
-  const npkChartRef = useRef(null);
-  const temperatureChartInstance = useRef(null);
-  const soilMoistureChartInstance = useRef(null);
-  const phChartInstance = useRef(null);
-  const npkChartInstance = useRef(null);
+  const chartsConfig = [
+    {
+      title: "Temperature (°C)",
+      metrics: [
+        { field: "Temperature", name: "Temperature", color: "#e67e22" },
+      ],
+    },
+    {
+      title: "Humidity (%)",
+      metrics: [
+        { field: "Humidity", name: "Humidity", color: "#2ecc71" },
+      ],
+    },
+    {
+      title: "NPK (mg/kg)",
+      metrics: [
+        { field: "Nitrogen", name: "Nitrogen", color: "#e74c3c" },
+        { field: "Phosphorus", name: "Phosphorus", color: "#2980b9" },
+        { field: "Potassium", name: "Potassium", color: "#27ae60" },
+      ],
+    },
+    {
+      title: "pH",
+      metrics: [
+        { field: "pH", name: "pH", color: "#8e44ad" },
+      ],
+    },
+    {
+      title: "Conductivity (us/cm)",
+      metrics: [
+        { field: "Conductivity", name: "Conductivity", color: "#34495e" },
+      ],
+    },
+    
+    {
+      title: "Salinity (mg/L)",
+      metrics: [
+        { field: "Salinity", name: "Salinity", color: "#f39c12" },
+      ],
+    }
+  ];
+
+  const chartRefs = useRef([]);
+  const chartInstances = useRef([]);
 
   const fetchData = async (deviceId) => {
     try {
       setLoading(true);
       setError(null);
-  
-      // Construir parâmetros de data para a requisição
+
       const params = {
         deviceId: deviceId,
         startDate: startDate ? `${startDate} 00:00:00` : undefined,
         endDate: endDate ? `${endDate} 23:59:59` : undefined,
       };
-  
+
       const [dashboardResponse, historyResponse] = await Promise.all([
         axios.get("http://localhost:3001/dashboard", { params }),
         axios.get("http://localhost:3001/measures/history", { params }),
       ]);
-  
+
+      console.log(JSON.stringify(historyResponse));
+
       if (dashboardResponse.data.success && historyResponse.data.success) {
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
         setLastUpdated(new Date());
       } else {
-        // Caso não tenha sucesso, redefinir para vazio
         setSensorsData({});
         setHistoryData([]);
         setLastUpdated(new Date());
       }
     } catch (err) {
       console.error(err);
-      // Definir estados como vazios quando ocorrer erro
       setSensorsData({});
       setHistoryData([]);
       setLastUpdated(new Date());
@@ -64,283 +110,135 @@ function Dashboard() {
       setLoading(false);
     }
   };
-  
+
+  const getMinMax = (data) => {
+    const values = data.map((item) => item.value);
+    return {
+      min: Math.min(...values),
+      max: Math.max(...values),
+    };
+  };
 
   const initializeCharts = () => {
-    // Destruir instâncias anteriores dos gráficos, se existirem
-    if (temperatureChartInstance.current) {
-      temperatureChartInstance.current.destroy();
-    }
-    if (soilMoistureChartInstance.current) {
-      soilMoistureChartInstance.current.destroy();
-    }
-    if (phChartInstance.current) {
-      phChartInstance.current.destroy();
-    }
-    if (npkChartInstance.current) {
-      npkChartInstance.current.destroy();
-    }
-  
-    if (historyData.length > 0) {
-      // Função para calcular os valores min e max
-      const getMinMax = (data) => {
-        const values = data.map((item) => item.value);
-        return {
-          min: Math.min(...values),
-          max: Math.max(...values),
-        };
-      };
-  
-      // Preparar dados para o gráfico de Temperatura e Umidade
-      const temperatureHumidityData = [
-        ...historyData.map((item) => ({
-          date: item.created_at,
-          value: item.temperature,
-          type: "Temperature",
-        })),
-        ...historyData.map((item) => ({
-          date: item.created_at,
-          value: item.humidity,
-          type: "Humidity",
-        })),
-      ];
-  
-      // Calculando min e max para o gráfico de Temperatura e Umidade
-      const { min: tempMin, max: tempMax } = getMinMax(temperatureHumidityData);
-  
-      // Preparar dados para o gráfico de pH
-      const phData = historyData.map((item) => ({
-        date: item.created_at,
-        value: item.ph,
-        type: "pH",
-      }));
-  
-      // Calculando min e max para o gráfico de pH
-      const { min: phMin, max: phMax } = getMinMax(phData);
-  
-      // Preparar dados para o gráfico de NPK
-      const npkData = historyData.flatMap((item) => [
-        { date: item.created_at, value: item.nitrogen, type: "Nitrogen" },
-        { date: item.created_at, value: item.phosphorus, type: "Phosphorus" },
-        { date: item.created_at, value: item.potassium, type: "Potassium" },
-      ]);
-  
-      // Calculando min e max para o gráfico de NPK
-      const { min: npkMin, max: npkMax } = getMinMax(npkData);
-  
-      // Preparar dados para o gráfico de Umidade do Solo
-      const soilMoistureData = historyData.map((item) => ({
-        date: item.created_at,
-        value: item.humidity,
-        type: "Humidity",
-      }));
-  
-      // Calculando min e max para o gráfico de Umidade do Solo
-      const { min: soilMin, max: soilMax } = getMinMax(soilMoistureData);
-  
-      // Inicializar o gráfico de Temperatura e Umidade
-      if (temperatureChartRef.current) {
-        temperatureChartInstance.current = new Line(temperatureChartRef.current, {
-          data: temperatureHumidityData,
-          xField: "date",
-          yField: "value",
-          seriesField: "type",
-          color: ["#3498db", "#2ecc71"],
-          smooth: true, // Faz a linha ficar suavizada para melhorar a visualização
-          xAxis: {
-            type: "time",
-            label: {
-              formatter: (text) => {
-                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
-                return date.isValid() ? date.format("DD/MM/YY") : text;
-              },
-            },
-          },
-          yAxis: {
-            min: tempMin,
-            max: tempMax,
-            label: {
-              formatter: (text) => `${Math.round(text)}`,
-            },
-          },
-          tooltip: {
-            shared: true,
-          },
-          animation: true,
-        });
-        temperatureChartInstance.current.render();
-      }
-  
-      // Inicializar o gráfico de pH
-      if (phChartRef.current) {
-        phChartInstance.current = new Line(phChartRef.current, {
-          data: phData,
-          xField: "date",
-          yField: "value",
-          seriesField: "type",
-          color: ["#8e44ad"],
-          point: {
-            size: 5,
-            shape: "circle",
-          },
-          xAxis: {
-            type: "time",
-            label: {
-              formatter: (text) => {
-                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
-                return date.isValid() ? date.format("DD/MM/YY") : text;
-              },
-            },
-          },
-          yAxis: {
-            min: phMin,
-            max: phMax,
-            label: {
-              formatter: (text) => `${Math.round(text)}`,
-            },
-          },
-          tooltip: {
-            shared: true,
-          },
-          animation: true,
-        });
-        phChartInstance.current.render();
-      }
-  
-      // Inicializar o gráfico de NPK
-      if (npkChartRef.current) {
-        npkChartInstance.current = new Line(npkChartRef.current, {
-          data: npkData,
-          xField: "date",
-          yField: "value",
-          seriesField: "type",
-          color: ["#e74c3c", "#2980b9", "#27ae60"],
-          point: {
-            size: 5,
-            shape: "circle",
-          },
-          xAxis: {
-            type: "time",
-            label: {
-              formatter: (text) => {
-                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
-                return date.isValid() ? date.format("DD/MM/YY") : text;
-              },
-            },
-          },
-          yAxis: {
-            min: npkMin,
-            max: npkMax,
-            label: {
-              formatter: (text) => `${Math.round(text)}`,
-            },
-          },
-          tooltip: {
-            shared: true,
-          },
-          animation: true,
-        });
-        npkChartInstance.current.render();
-      }
-  
-      // Inicializar o gráfico de Umidade do Solo
-      if (soilMoistureChartRef.current) {
-        soilMoistureChartInstance.current = new Line(soilMoistureChartRef.current, {
-          data: soilMoistureData,
-          xField: "date",
-          yField: "value",
-          seriesField: "type",
-          color: ["#f39c12"],
-          point: {
-            size: 5,
-            shape: "circle",
-          },
-          xAxis: {
-            type: "time",
-            label: {
-              formatter: (text) => {
-                const date = moment(text, "YYYY-MM-DD HH:mm:ss"); // Formato da data que está vindo do backend
-                return date.isValid() ? date.format("DD/MM/YY") : text;
-              },
-            },
-          },
-          yAxis: {
-            min: soilMin,
-            max: soilMax,
-            label: {
-              formatter: (text) => `${Math.round(text)}`,
-            },
-          },
-          tooltip: {
-            shared: true,
-          },
-          animation: true,
-        });
-        soilMoistureChartInstance.current.render();
-      }
-    }
-  };
-  
-  
+    // Destruir instâncias anteriores
+    chartInstances.current.forEach((instance) => {
+      if (instance) instance.destroy();
+    });
+    chartInstances.current = [];
 
-// Atualize o useEffect que obtém os dispositivos
-useEffect(() => {
-  const fetchDevices = async () => {
-    try {
-      const devicesResponse = await axios.get("http://localhost:3001/devices");
-      if (devicesResponse.data.success) {
-        const devicesData = devicesResponse.data.data;
-        setDevices(devicesData);
-        if (devicesData.length > 0) {
-          setSelectedDevice(devicesData[0].id);
-        }
-      } else {
-        setError("Erro ao carregar dispositivos.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Erro ao se conectar com o servidor.");
-    }
+    chartsConfig.forEach((chartConfig, index) => {
+      const container = chartRefs.current[index];
+      if (!container) return;
+
+      const moment = require('moment-timezone');
+
+      const chartData = chartConfig.metrics.flatMap((metric) => {
+        return historyData.map((item) => {
+          const timestamp = item.created_at_mili * (item.created_at_mili < 1e12 ? 1000 : 1); // Ajusta para milissegundos, se necessário
+          if (!timestamp || isNaN(timestamp)) {
+            console.error("Timestamp inválido:", item.created_at_mili); // Depurar valores inválidos
+          }
+          const localCreatedAt = moment(timestamp).tz("America/Sao_Paulo"); // Ajusta o fuso horário
+          return {
+            date: localCreatedAt.toISOString(), // ISO 8601 format
+            value: item[metric.field],
+            type: metric.name,
+          };
+        });
+      });
+      
+      
+    
+      if (chartData.length === 0) return;
+
+      const { min, max } = getMinMax(chartData);
+
+      const area = new Area(container, {
+        data: chartData,
+        xField: "date", // Campo para o eixo X (timestamp)
+        yField: "value",
+        seriesField: "type",
+        color: chartConfig.metrics.map((m) => m.color),
+        xAxis: {
+          type: "time",
+          label: {
+            formatter: (text) => {
+              const date = moment(parseInt(text));
+              return date.isValid() ? date.format("DD/MM/YYYY HH:mm") : text;
+            },
+          },
+        },
+        yAxis: {
+          label: {
+            formatter: (text) => `${Math.round(text)}`,
+          },
+        },
+        tooltip: {
+          shared: true,
+          customContent: (title, items) => {
+            const formattedDate = moment(parseInt(title)).format("DD/MM/YYYY HH:mm:ss");
+            const tooltipItems = items
+              .map(
+                (item) =>
+                  `<span style="color:${item.color}">●</span> ${item.name}: ${item.value}<br/>`
+              )
+              .join("");
+            return `<div style="padding:10px">
+                      <strong>${formattedDate}</strong><br/>
+                      ${tooltipItems}
+                    </div>`;
+          },
+        },
+        animation: true,
+        smooth: true,
+      });
+      
+
+      area.render();
+      chartInstances.current[index] = area;
+    });
   };
 
-  fetchDevices();
-}, []);
-
-// Novo useEffect para buscar dados quando um dispositivo for selecionado
-useEffect(() => {
-  if (selectedDevice) {
-    fetchData(selectedDevice);
-  }
-}, [selectedDevice]);
-
-  // Inicializar gráficos quando historyData mudarem
   useEffect(() => {
-    if (historyData.length > 0 ) {
-      initializeCharts();
-    }
-
-    return () => {
-      // Limpar instâncias dos gráficos ao desmontar ou atualizar
-      if (temperatureChartInstance.current) {
-        temperatureChartInstance.current.destroy();
-        temperatureChartInstance.current = null;
-      }
-      if (soilMoistureChartInstance.current) {
-        soilMoistureChartInstance.current.destroy();
-        soilMoistureChartInstance.current = null;
-      }
-      if (phChartInstance.current) {
-        phChartInstance.current.destroy();
-        phChartInstance.current = null;
-      }
-      if (npkChartInstance.current) {
-        npkChartInstance.current.destroy();
-        npkChartInstance.current = null;
+    const fetchDevices = async () => {
+      try {
+        const devicesResponse = await axios.get("http://localhost:3001/devices");
+        if (devicesResponse.data.success) {
+          const devicesData = devicesResponse.data.data;
+          setDevices(devicesData);
+          if (devicesData.length > 0) {
+            setSelectedDevice(devicesData[0].id);
+          }
+        } else {
+          setError("Erro ao carregar dispositivos.");
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Erro ao se conectar com o servidor.");
       }
     };
+    fetchDevices();
+  }, []);
+  
+  useEffect(() => {
+    if (selectedDevice) {
+      fetchData(selectedDevice);
+    }
+  }, [selectedDevice, startDate, endDate]);
+  
+  useEffect(() => {
+    if (historyData.length > 0) {
+      initializeCharts();
+    }
+    return () => {
+      chartInstances.current.forEach((instance) => {
+        if (instance) instance.destroy();
+      });
+      chartInstances.current = [];
+    };
   }, [historyData]);
+  
 
-  // Renderização condicional para loading e error
   if (loading) {
     return (
       <div className="loading">
@@ -420,65 +318,115 @@ useEffect(() => {
             </div>
           </div>
 
+          <h1 className="filter-title">Ultimas Medições do Solo</h1>
           <hr className="title-divisor" />
           <div className="stats-grid">
             {sensorsData && (
               <>
+                {/* Card de Temperatura */}
                 <div className="stat-card">
-                  <h3 className="stat-title">Temperatura</h3>
-                  <p className="stat-value">
-                    {sensorsData.Temperature !== undefined ? `${sensorsData.Temperature}°C` : "--"}
-                  </p>
-                  
+                  <h3 className="stat-title temperature-value">
+                    <FontAwesomeIcon icon={faTemperatureHigh} className="stat-icon" /> Temperatura
+                  </h3>
+                  <div className="stat-values">
+                    <span className="stat-value temperature-value">
+                      {sensorsData.Temperature !== undefined
+                        ? `${parseFloat(sensorsData.Temperature).toFixed(2)} °C`
+                        : "--"}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Card de Umidade */}
                 <div className="stat-card">
-                  <h3 className="stat-title">Umidade</h3>
-                  <p className="stat-value">
-                    {sensorsData.Humidity !== undefined ? `${sensorsData.Humidity}%` : "--"}
-                  </p>
-                  
+                  <h3 className="stat-title humidity-value">
+                    <FontAwesomeIcon icon={faDroplet} className="stat-icon" /> Umidade
+                  </h3>
+                  <div className="stat-values">
+                    <span className="stat-value humidity-value">
+                      {sensorsData.Humidity !== undefined
+                        ? `${parseFloat(sensorsData.Humidity).toFixed(2)} %`
+                        : "--"}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Card de pH */}
                 <div className="stat-card">
-                  <h3 className="stat-title">pH</h3>
-                  <p className="stat-value">
-                    {sensorsData.pH !== undefined ? sensorsData.pH : "--"}
-                  </p>
-                  
+                  <h3 className="stat-title ph-value">
+                    <FontAwesomeIcon icon={faFlask} className="stat-icon " /> pH
+                  </h3>
+                  <div className="stat-values">
+                    <span className="stat-value ph-value">
+                      {sensorsData.pH !== undefined ? parseFloat(sensorsData.pH).toFixed(2) : "--"}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Card de NPK */}
+                <div className="stat-card npk-card">
+                  <h3 className="stat-title npk-title">
+                    <FontAwesomeIcon icon={faVial} className="stat-icon nitrogen" /> 
+                    <span className="npk-letter nitrogen">N</span>
+                    <span className="npk-letter phosphorus">P</span>
+                    <span className="npk-letter potassium">K</span>
+                  </h3>
+                  <div className="stat-values">
+                    <div className="npk-item">
+                      <span className="npk-label">N:</span>
+                      <span className="npk-value">
+                        {sensorsData.Nitrogen !== undefined
+                          ? parseFloat(sensorsData.Nitrogen).toFixed(2)
+                          : "--"}
+                      </span>
+                    </div>
+                    <div className="npk-item">
+                      <span className="npk-label">P:</span>
+                      <span className="npk-value">
+                        {sensorsData.Phosphorus !== undefined
+                          ? parseFloat(sensorsData.Phosphorus).toFixed(2)
+                          : "--"}
+                      </span>
+                    </div>
+                    <div className="npk-item">
+                      <span className="npk-label">K:</span>
+                      <span className="npk-value">
+                        {sensorsData.Potassium !== undefined
+                          ? parseFloat(sensorsData.Potassium).toFixed(2)
+                          : "--"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card de Salinidade */}
                 <div className="stat-card">
-                  <h3 className="stat-title">NPK</h3>
-                  <p className="stat-value">
-                    {sensorsData.Nitrogen !== undefined &&
-                    sensorsData.Phosphorus !== undefined &&
-                    sensorsData.Potassium !== undefined
-                      ? `${sensorsData.Nitrogen}-${sensorsData.Phosphorus}-${sensorsData.Potassium}`
-                      : "--"}
-                  </p>
-                  
+                  <h3 className="stat-title salinity-value">
+                    <FontAwesomeIcon icon={faWater} className="stat-icon" /> Salinidade
+                  </h3>
+                  <div className="stat-values">
+                    <span className="stat-value salinity-value">
+                      {sensorsData.Salinity !== undefined
+                        ? `${parseFloat(sensorsData.Salinity).toFixed(2)} mg/L`
+                        : "--"}
+                    </span>
+                  </div>
                 </div>
               </>
             )}
           </div>
-
-
+          <hr className="title-divisor" />
 
           <div className="charts-grid">
-            <div className="chart-container">
-              <h3 className="chart-title">Temperatura e Umidade do Ar</h3>
-              <div ref={temperatureChartRef} className="chart"></div>
-            </div>
-            <div className="chart-container">
-              <h3 className="chart-title">Umidade do Solo</h3>
-              <div ref={soilMoistureChartRef} className="chart"></div>
-            </div>
-            <div className="chart-container">
-              <h3 className="chart-title">Níveis de pH</h3>
-              <div ref={phChartRef} className="chart"></div>
-            </div>
-            <div className="chart-container">
-              <h3 className="chart-title">Níveis de NPK</h3>
-              <div ref={npkChartRef} className="chart"></div>
-            </div>
+            {chartsConfig.map((chartConfig, index) => (
+              <div className="chart-container" key={index}>
+                <h3 className="chart-title">{chartConfig.title}</h3>
+                <div
+                  ref={(el) => (chartRefs.current[index] = el)}
+                  className="chart"
+                ></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

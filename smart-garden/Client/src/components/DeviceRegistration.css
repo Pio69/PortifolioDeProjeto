@@ -31,6 +31,37 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Espaçamento entre a label e o input */
+  
+}
+
+.form-label {
+  font-weight: bold;
+  color: #555;
+}
+
+.form-control {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  border-left: 1px !important;
+  margin-left: -1px !important;
+}
+
+/* Estilização dos inputs dentro do modal */
+.modal .form-group .form-control {
+  border-radius: 4px !important; /* Borda arredondada */
+  border-left: 1px solid #ced4da !important; /* Garante a borda esquerda */
+}
+
+/* Ajuste para o botão toggle (se houver no modal) */
+.modal .input-group .toggle {
+  margin-left: -1px !important; /* Evita que o botão cubra a borda esquerda */
+}
 
 
 
