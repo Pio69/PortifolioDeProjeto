@@ -99,11 +99,10 @@ function DeviceRegistration() {
             <hr className="title-divider" />
             <div className="card">
               <div className="card-body">
-                <h4 className="card-title mb-4">Lista de Dispositivos</h4>
                 <table className="table table-bordered custom-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
+                      
                       <th>Nome</th>
                       <th>Localização (Lat, Lon)</th>
                       <th>Ações</th>
@@ -112,7 +111,7 @@ function DeviceRegistration() {
                   <tbody>
                     {devices.map((device) => (
                       <tr key={device.id}>
-                        <td>{device.id}</td>
+                        
                         <td>{device.name}</td>
                         <td>
                           Lat: {device.lat}, Lon: {device.lon}

@@ -31,23 +31,23 @@ function Dashboard() {
 
   const chartsConfig = [
     {
-      title: "Temperature (°C)",
+      title: "Temperatura (°C)",
       metrics: [
-        { field: "Temperature", name: "Temperature", color: "#e67e22" },
+        { field: "Temperature", name: "Temperatura", color: "#e67e22" },
       ],
     },
     {
-      title: "Humidity (%)",
+      title: "Umidade (%)",
       metrics: [
-        { field: "Humidity", name: "Humidity", color: "#2ecc71" },
+        { field: "Humidity", name: "Umidade", color: "#2ecc71" },
       ],
     },
     {
-      title: "NPK (mg/kg)",
+      title: "Níveis de Nitrogênio, Fósforo, Potássio (mg/kg)",
       metrics: [
-        { field: "Nitrogen", name: "Nitrogen", color: "#e74c3c" },
-        { field: "Phosphorus", name: "Phosphorus", color: "#2980b9" },
-        { field: "Potassium", name: "Potassium", color: "#27ae60" },
+        { field: "Nitrogen", name: "Nitrogênio", color: "#e74c3c" },
+        { field: "Phosphorus", name: "Fósforo", color: "#2980b9" },
+        { field: "Potassium", name: "Potássio", color: "#27ae60" },
       ],
     },
     {
@@ -57,18 +57,17 @@ function Dashboard() {
       ],
     },
     {
-      title: "Conductivity (us/cm)",
+      title: "Condutividade (µS/cm)",
       metrics: [
-        { field: "Conductivity", name: "Conductivity", color: "#34495e" },
+        { field: "Conductivity", name: "Condutividade", color: "#34495e" },
       ],
     },
-    
     {
-      title: "Salinity (mg/L)",
+      title: "Salinidade (mg/L)",
       metrics: [
-        { field: "Salinity", name: "Salinity", color: "#f39c12" },
+        { field: "Salinity", name: "Salinidade", color: "#f39c12" },
       ],
-    }
+    },
   ];
 
   const chartRefs = useRef([]);
@@ -278,7 +277,7 @@ function Dashboard() {
                 <option value="">Selecione um dispositivo</option>
                 {devices.map((device) => (
                   <option key={device.id} value={device.id}>
-                    {device.id} - {device.name}
+                    {device.name}
                   </option>
                 ))}
               </select>
@@ -309,7 +308,7 @@ function Dashboard() {
                 onClick={() => {
                   if (selectedDevice) {
                     fetchData(selectedDevice);
-                  }
+                  } 
                 }}
                 className="filter-button"
               >
@@ -317,6 +316,9 @@ function Dashboard() {
               </button>
             </div>
           </div>
+
+          <br></br>
+          <br></br>
 
           <h1 className="filter-title">Ultimas Medições do Solo</h1>
           <hr className="title-divisor" />
@@ -354,7 +356,7 @@ function Dashboard() {
                 {/* Card de pH */}
                 <div className="stat-card">
                   <h3 className="stat-title ph-value">
-                    <FontAwesomeIcon icon={faFlask} className="stat-icon " /> pH
+                    <FontAwesomeIcon icon={faFlask} className="stat-icon " /> PH
                   </h3>
                   <div className="stat-values">
                     <span className="stat-value ph-value">

@@ -14,37 +14,42 @@ function Events() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Buscar eventos do backend
-  const fetchEvents = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const devicesResponse = await axios.get('http://localhost:3001/devices');
-      const eventsResponse = await axios.get('http://localhost:3001/events');
+  // Buscar eventos do backend e ordenar por data
+const fetchEvents = async () => {
+  setIsLoading(true);
+  setError('');
+  try {
+    const devicesResponse = await axios.get('http://localhost:3001/devices');
+    const eventsResponse = await axios.get('http://localhost:3001/events');
 
-      if (devicesResponse.data.success) {
-        setDevices(devicesResponse.data.data);
-        const devicesMap = devicesResponse.data.data.reduce((map, device) => {
-          map[device.id] = device.name;
-          return map;
-        }, {});
+    if (devicesResponse.data.success) {
+      setDevices(devicesResponse.data.data);
+      const devicesMap = devicesResponse.data.data.reduce((map, device) => {
+        map[device.id] = device.name;
+        return map;
+      }, {});
 
-        const eventsWithDeviceName = eventsResponse.data.data.map((event) => ({
-          ...event,
-          deviceName: devicesMap[event.device_id] || 'Dispositivo Desconhecido',
-        }));
+      // Adicionar nome do dispositivo aos eventos
+      const eventsWithDeviceName = eventsResponse.data.data.map((event) => ({
+        ...event,
+        deviceName: devicesMap[event.device_id] || 'Dispositivo Desconhecido',
+      }));
 
-        setEvents(eventsWithDeviceName);
-        setFilteredEvents(eventsWithDeviceName);
-      } else {
-        console.error('Erro ao carregar dispositivos');
-      }
-    } catch (error) {
-      setError('Erro ao buscar eventos. Tente novamente mais tarde.');
-    } finally {
-      setIsLoading(false);
+      // Ordenar os eventos por data de criação (decrescente, mais recente primeiro)
+      const sortedEvents = eventsWithDeviceName.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setEvents(sortedEvents);
+      setFilteredEvents(sortedEvents);
+    } else {
+      console.error('Erro ao carregar dispositivos');
     }
-  };
+  } catch (error) {
+    setError('Erro ao buscar eventos. Tente novamente mais tarde.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
 
   // Buscar dispositivos do backend
@@ -139,7 +144,7 @@ function Events() {
                   <option value="">Selecione um dispositivo</option>
                   {devices.map((device) => (
                     <option key={device.id} value={String(device.id)}>
-                      {device.id} - {device.name}
+                      {device.name}
                     </option>
                   ))}
                 </select>
@@ -161,23 +166,35 @@ function Events() {
             {error && <p className="error-message">{error}</p>}
             <div className="events-container">
               {filteredEvents.map((event) => (
+                
                 <div
                   key={event.id}
                   className={`alert-card ${event.type === 'critical' ? 'critical' : event.type === 'warning' ? 'warning' : 'info'}`}
                 >
                   <div className="alert-icon-container">
                     <i
-                      className={`fa-solid fa-exclamation-triangle alert-icon ${event.type === 'critical' ? 'critical' : event.type === 'warning' ? 'warning' : 'info'}`}
+                      className={`alert-icon ${
+                        event.type === 'critical'
+                          ? 'fa-solid fa-circle-exclamation critical'
+                          : event.type === 'warning'
+                          ? 'fa-solid fa-exclamation-triangle warning'
+                          : 'fa-solid fa-info-circle info'
+                      }`}
                     ></i>
                   </div>
+
                   <div className="alert-text-container">
                     <span className="alert-message">{event.alertMessage}</span>
                     {event.gene_by_ia === 1 && <div className="generated-by-ai">Gerado por IA</div>}
                     <div className="event-details">
-                      <p><strong>Device:</strong> {event.device_id} - {event.deviceName}</p>
+                      <p><strong>Dispositivo:</strong> {event.deviceName}</p>
                       <p><strong>Data de Criação:</strong> {event.created_at ? new Date(event.created_at).toLocaleString() : 'Data indisponível'}</p>
+                      {event.measure !== undefined && event.measure !== null && (
+                        <p><strong>Medição:</strong> {event.measure}</p>
+                      )}
                     </div>
                   </div>
+
                   <button
                     className="delete-button"
                     onClick={() => handleDelete(event.alertMessage)}
@@ -188,13 +205,7 @@ function Events() {
                 </div>
               ))}
             </div>
-            {predictedFertilizer && (
-              <div className="prediction-container">
-                <h3>Recomendação de Fertilizante:</h3>
-                <p><strong>Fertilizante:</strong> {predictedFertilizer['Predicted Fertilizer']}</p>
-                <p><strong>Mensagem:</strong> {predictedFertilizer['Message']}</p>
-              </div>
-            )}
+            
           </div>
         </div>
       </div>

@@ -166,10 +166,7 @@ function LoginScreen() {
               <div className="col-12">
                 <h1 id="dsd-heading">Smart Garden</h1>
                 <p id="dsd-description">
-                  A aplicação web inteligente de gerenciamento de jardins permite
-                  monitorar e controlar remotamente a irrigação, a fertilização e as
-                  condições climáticas, proporcionando economia de tempo e recursos
-                  para os usuários.
+                Cuide do seu jardim com inteligência! Nossa tecnologia analisa o solo e o clima para recomendar os melhores fertilizantes para suas plantas prosperarem.
                 </p>
               </div>
             </div>

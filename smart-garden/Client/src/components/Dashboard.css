@@ -270,6 +270,12 @@ body {
   color: #f39c12; /* Amarelo para Salinidade */
 }
 
+
+/* Seleciona o path dentro do SVG do ícone */
+.stat-title .stat-icon svg path {
+  fill: #8e44ad; /* Roxo para pH */
+}
+
 /* NPK Card */
 .npk-card {
   text-align: center;
@@ -331,12 +337,6 @@ body {
   align-items: center;
   gap: 5px; /* Espaço entre as letras */
 }
-
-.stat-icon {
-  color: #555;
-}
-
-
 
 .stat-icon{
   margin-right: 10px;

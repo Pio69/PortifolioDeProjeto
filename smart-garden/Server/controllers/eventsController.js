@@ -6,7 +6,7 @@ exports.getEvents = async (req, res) => {
   const { id } = req.params;
 
   try {
-    let query = 'SELECT `desc` AS alertMessage, `level` AS type, gene_by_ia, created_at, device_id FROM tb_events';
+    let query = 'SELECT `desc` AS alertMessage, `level` AS type, gene_by_ia, created_at, device_id, measure FROM tb_events';
     let params = [];
 
     if (id) {

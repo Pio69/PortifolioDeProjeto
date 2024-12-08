@@ -5,12 +5,23 @@ import joblib
 import logging
 import httpx
 from typing import Dict, Tuple
+from fastapi.middleware.cors import CORSMiddleware
 
 # Carregar o modelo salvo
 model = joblib.load("fertilizer_classification_model_for_alface.pkl")
 
-# Inicializar o FastAPI
+# Configurar o FastAPI
 app = FastAPI()
+
+# Adicionar middleware de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Permitir a origem do front-end
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos os métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permitir todos os headers
+)
+
 
 # Dicionário de mensagens para os fertilizantes
 FERTILIZER_MESSAGES = {
@@ -127,8 +138,8 @@ def get_latest_measure_data() -> list:
         logging.error(f"Erro ao consultar o banco de dados: {err}")
         raise HTTPException(status_code=500, detail="Erro ao acessar o banco de dados")
 
-# Função para inserir dados na tabela tb_events
-def insert_event(data: Dict[str, str]):
+# Função para inserir dados na tabela tb_events com o campo measure
+def insert_event(data: Dict[str, str], measure: float):
     try:
         # Conexão com o banco de dados MySQL
         connection = mysql.connector.connect(
@@ -141,15 +152,16 @@ def insert_event(data: Dict[str, str]):
 
         # Query para inserir dados na tabela tb_events com "INSERT IGNORE"
         query = """
-        INSERT IGNORE INTO tb_events (gene_by_ia, device_id, `desc`, level, created_at)
-        VALUES (%s, %s, %s, %s, now())
-        """
+                INSERT IGNORE INTO tb_events (gene_by_ia, device_id, `desc`, level, measure, created_at)
+                VALUES (%s, %s, %s, %s, %s, now())
+                """
+
 
         # Concatenando a mensagem e o fertilizante previsto
         message = f"{data['predicted_fertilizer']}"
 
         # Definindo os valores a serem inseridos
-        values = (1, data['device_id'], message, 'warning')
+        values = (1, data['device_id'], message, 'warning', measure)
 
         # Executando a query de inserção
         cursor.execute(query, values)
@@ -182,7 +194,66 @@ def prepare_input_data(input_data: pd.DataFrame) -> pd.DataFrame:
 def generate_weather_cache_key(lat: float, lon: float) -> Tuple[float, float]:
     return (lat, lon)
 
-# Endpoint de predição
+# Função para gerar eventos de temperatura e umidade com o campo measure
+def generate_temp_humidity_event(device_id: int, temp: float, humidity: float):
+    try:
+        # Conexão com o banco de dados MySQL
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="admin",
+            database="smartlettuce"
+        )
+        cursor = connection.cursor()
+
+        print("temp ", temp, " humidity ", humidity)
+
+        # Verificação de temperatura
+        if 17 <= temp <= 19:
+            temp_message = "Temperatura baixa... As plantas estão tremendo! ⚠️"
+            temp_level = "warning"
+        elif temp < 17:
+            temp_message = "Congelando! 🥶 As plantas podem não resistir ao frio extremo!"
+            temp_level = "critical"
+        else:
+            temp_message = None
+
+        # Verificação de umidade
+        if 60 <= humidity <= 70:
+            humidity_message = "Umidade no limite! 💦 Atenção para evitar fungos."
+            humidity_level = "warning"
+        elif humidity < 60:
+            humidity_message = "Umidade muito baixa! 🌵 As plantas estão ressecando!"
+            humidity_level = "critical"
+        elif humidity > 70:
+            humidity_message = "Umidade excessiva! 🌧️ Risco de fungos."
+            humidity_level = "critical"
+        else:
+            humidity_message = None
+
+        # Inserir evento de temperatura se existir mensagem
+        if temp_message:
+            cursor.execute(
+                "INSERT IGNORE INTO tb_events (gene_by_ia, device_id, `desc`, level, measure, created_at) VALUES (%s, %s, %s, %s, %s, now())",
+                (0, device_id, temp_message, temp_level, temp)
+            )
+
+        # Inserir evento de umidade se existir mensagem
+        if humidity_message:
+            cursor.execute(
+                "INSERT IGNORE INTO tb_events (gene_by_ia, device_id, `desc`, level, measure, created_at) VALUES (%s, %s, %s, %s, %s, now())",
+                (0, device_id, humidity_message, humidity_level, humidity)
+            )
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    except mysql.connector.Error as err:
+        logging.error(f"Erro ao inserir eventos de temperatura e umidade: {err}")
+        raise HTTPException(status_code=500, detail="Erro ao inserir eventos no banco de dados")    
+
+# Modificação no endpoint /predict para chamar a função de geração de eventos de temperatura e umidade
 @app.post("/predict")
 async def predict_fertilizer(api_key: str = Query(...)):
     try:
@@ -242,14 +313,29 @@ async def predict_fertilizer(api_key: str = Query(...)):
             # Obter o fertilizante previsto
             predicted_fertilizer = prediction[0]
 
+            # Determinar a medida com base no fertilizante previsto
+            if "Calcário" in predicted_fertilizer or "Enxofre Elementar" in predicted_fertilizer:
+                measure = record.get('pH', 0)
+            elif "Nitrato de Amônio" in predicted_fertilizer:
+                measure = record.get('Nitrogen', 0)
+            elif "Superfosfato Simples" in predicted_fertilizer:
+                measure = record.get('Phosphorus', 0)
+            elif "Cloreto de Potássio" in predicted_fertilizer:
+                measure = record.get('Potassium', 0)
+            else:
+                measure = 0  # Caso não seja necessário ajuste
+
             # Criar o dicionário com os dados para o insert
             event_data = {
                 "device_id": device_id,
                 "predicted_fertilizer": predicted_fertilizer
             }
 
-            # Inserir os dados na tabela tb_events
-            insert_event(event_data)
+            # Inserir os dados na tabela tb_events com a medida
+            insert_event(event_data, measure)
+
+            # Gerar eventos de temperatura e umidade
+            generate_temp_humidity_event(device_id, weather_data["temp"], weather_data["humidity"])
 
             valid_predictions.append({
                 "device_id": device_id,
