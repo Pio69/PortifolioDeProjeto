@@ -74,6 +74,9 @@
   cursor: pointer;
 }
 
-.dropdown-item:hover {
+/*dropdown-item*/
+.dropdown-menu:hover {
   background: #f8f9fa;
 }
+
+
