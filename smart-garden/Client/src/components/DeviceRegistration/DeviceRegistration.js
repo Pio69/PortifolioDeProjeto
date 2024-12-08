@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import axios from 'axios';
-
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@fortawesome/fontawesome-free/css/all.css';
-import './styles.css';
+
+
+import Sidebar from '../SideBar/Sidebar';
+import TopBar from '../TopBar/TopBar';
 import './DeviceRegistration.css';
 
 function DeviceRegistration() {
@@ -19,13 +19,11 @@ function DeviceRegistration() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [userId, setUserId] = useState(null);
 
-  // Recuperar o user_id do localStorage
   useEffect(() => {
     const storedUserId = localStorage.getItem('user_id');
     setUserId(storedUserId);
   }, []);
 
-  // Buscar dispositivos do backend
   const fetchDevices = async () => {
     try {
       const response = await axios.get('http://localhost:3001/devices');
@@ -35,7 +33,6 @@ function DeviceRegistration() {
     }
   };
 
-  // Adicionar ou atualizar dispositivo
   const handleAddDevice = async () => {
     try {
       if (newDevice.trim() && newLat.trim() && newLon.trim() && userId) {
@@ -64,13 +61,11 @@ function DeviceRegistration() {
     }
   };
 
-  // Confirmar exclusão de dispositivo
   const confirmDeleteDevice = (device) => {
     setCurrentDevice(device);
     setShowConfirmModal(true);
   };
-
-  // Excluir dispositivo
+  
   const handleDeleteDevice = async () => {
     try {
       if (currentDevice) {

@@ -1,11 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LoginScreen from './components/LoginScreen';
-import RegisterScreen from './components/RegisterScreen';
-import Home from './components/Home';
-import Dashboard from './components/Dashboard';
-import Events from './components/Events'; // Importe o componente Events
-import DeviceRegistration from './components/DeviceRegistration'; // Importe o componente Events
+import LoginScreen from './components/LoginScreen/LoginScreen'
+import Dashboard from './components/Dashboard/Dashboard';
+import Events from './components/Events/Events'; // Importe o componente Events
+import DeviceRegistration from './components/DeviceRegistration/DeviceRegistration'; // Importe o componente Events
 
 import './App.css';
 
@@ -21,8 +19,6 @@ function App() {
             >
               <Routes>
                 <Route path="/" element={<LoginScreen />} />
-                <Route path="/register" element={<RegisterScreen />} />
-                <Route path="/home" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} /> {/* Nova Rota */}
                 <Route path="/forms" element={<DeviceRegistration />} /> {/* Nova Rota */}

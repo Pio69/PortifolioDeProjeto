@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../assets/logo.svg"; // Importa o arquivo logo.svg
-import "./styles.css";
+import logo from "../../assets/logo.svg";
+import "../styles.css";
 import "./TopBar.css";
 
 function TopBar() {
-  const [showDropdown, setShowDropdown] = useState(false); // Controla a exibição do dropdown
+  const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
-  // Verifica se o usuário está autenticado
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // Função de logout
   const handleLogout = () => {
-    // Remove o token do localStorage
     localStorage.removeItem("token");
-    // Redireciona para a tela de login
     navigate("/login");
   };
 
-  // Fecha o dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".user-icon-container")) {
@@ -46,9 +41,10 @@ function TopBar() {
         {isLoggedIn && (
           <div
             className="user-icon-container"
-            onClick={() => setShowDropdown(!showDropdown)} // Alterna o estado do dropdown
+            onClick={() => setShowDropdown(!showDropdown)}
           >
             <i className="fa-solid fa-user user-icon"></i>
+            
             {/* Dropdown para "Sair" */}
             <div className={`dropdown-menu ${showDropdown ? "show" : ""}`}>
               <button onClick={handleLogout} className="dropdown-item">

@@ -1,3 +1,4 @@
+import json
 import mysql.connector
 from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
@@ -315,13 +316,13 @@ async def predict_fertilizer(api_key: str = Query(...)):
 
             # Determinar a medida com base no fertilizante previsto
             if "Calcário" in predicted_fertilizer or "Enxofre Elementar" in predicted_fertilizer:
-                measure = record.get('pH', 0)
+                measure = record["pH"]
             elif "Nitrato de Amônio" in predicted_fertilizer:
-                measure = record.get('Nitrogen', 0)
+                measure = record["Nitrogen"]
             elif "Superfosfato Simples" in predicted_fertilizer:
-                measure = record.get('Phosphorus', 0)
+                measure = record["Phosphorus"]
             elif "Cloreto de Potássio" in predicted_fertilizer:
-                measure = record.get('Potassium', 0)
+                measure = record["Potassium"]
             else:
                 measure = 0  # Caso não seja necessário ajuste
 
@@ -335,7 +336,7 @@ async def predict_fertilizer(api_key: str = Query(...)):
             insert_event(event_data, measure)
 
             # Gerar eventos de temperatura e umidade
-            generate_temp_humidity_event(device_id, weather_data["temp"], weather_data["humidity"])
+            generate_temp_humidity_event(device_id, record["Temperature"], record["Humidity"])
 
             valid_predictions.append({
                 "device_id": device_id,

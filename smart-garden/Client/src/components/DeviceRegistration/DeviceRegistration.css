@@ -5,24 +5,24 @@
 
 
 .custom-btn-primary {
-  background-color: #4f7335; /* Cor personalizada do botão */
+  background-color: #4f7335;
   border-color: #4f7335;
   color: white;
 }
 
 .custom-btn-primary:hover {
-  background-color: #659940; /* Cor ao passar o mouse */
+  background-color: #659940;
   border-color: #659940;
 }
 
 .custom-btn-secondary {
-  background-color: #f44336; /* Cor personalizada do botão */
+  background-color: #f44336;
   border-color: #f44336;
   color: white;
 }
 
 .custom-btn-secondary:hover {
-  background-color: #d32f2f; /* Cor ao passar o mouse */
+  background-color: #d32f2f;
   border-color: #d32f2f;
 }
 
@@ -34,7 +34,7 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 5px; /* Espaçamento entre a label e o input */
+  gap: 5px;
   
 }
 
@@ -52,17 +52,11 @@
   margin-left: -1px !important;
 }
 
-/* Estilização dos inputs dentro do modal */
 .modal .form-group .form-control {
-  border-radius: 4px !important; /* Borda arredondada */
-  border-left: 1px solid #ced4da !important; /* Garante a borda esquerda */
+  border-radius: 4px !important;
+  border-left: 1px solid #ced4da !important;
 }
 
-/* Ajuste para o botão toggle (se houver no modal) */
 .modal .input-group .toggle {
-  margin-left: -1px !important; /* Evita que o botão cubra a borda esquerda */
+  margin-left: -1px !important;
 }
-
-
-
-/* #4f7335  */

@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import logo from '../assets/logo-final.png'; // Caminho para o logo
-//import './styles.css'; // Estilos específicos da tela de login
-import './LoginScreen.css'; // Estilos específicos da tela de login
+import logo from '../../assets/logo-final.png';
+import './LoginScreen.css';
 
 function LoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -17,26 +16,21 @@ function LoginScreen() {
     e.preventDefault();
   
     try {
-      // Enviar requisição para o endpoint de login
       const response = await axios.post('http://localhost:3001/auth/login', formData);
 
       console.log(response);
   
       if (response.data.success) {
-        // Armazenar o token JWT e o user_id no localStorage
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user_id', response.data.user_id); // Armazena o user_id
+        localStorage.setItem('user_id', response.data.user_id);
   
-        // Redirecionar para o dashboard
         navigate('/dashboard');
       } else {
-        // Exibir mensagem de erro retornada pelo backend
         setResponseError(response.data.msg);
       }
     } catch (error) {
       console.error("Erro ao fazer login:", error);
   
-      // Tratar erros de requisição
       if (error.response) {
         if (error.response.status === 401) {
           setResponseError('Email ou senha incorretos. Por favor, tente novamente.');
@@ -166,7 +160,7 @@ function LoginScreen() {
               <div className="col-12">
                 <h1 id="dsd-heading">Smart Garden</h1>
                 <p id="dsd-description">
-                Cuide do seu jardim com inteligência! Nossa tecnologia analisa o solo e o clima para recomendar os melhores fertilizantes para suas plantas prosperarem.
+                Cuide do seu jardim com inteligência! Nossa tecnologia analisa o solo e o clima para recomendar os melhores fertilizantes para suas plantas prosperarem.w
                 </p>
               </div>
             </div>

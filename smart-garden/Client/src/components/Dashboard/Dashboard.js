@@ -13,8 +13,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 
-import TopBar from "./TopBar";
-import Sidebar from "./Sidebar";
+import TopBar from "../TopBar/TopBar";
+import Sidebar from "../SideBar/Sidebar";
 import moment from "moment";
 import "./Dashboard.css";
 
@@ -77,20 +77,18 @@ function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-
+  
       const params = {
         deviceId: deviceId,
-        startDate: startDate ? `${startDate} 00:00:00` : undefined,
-        endDate: endDate ? `${endDate} 23:59:59` : undefined,
+        startDate: startDate ? new Date(`${startDate}T00:00:00`).getTime() : undefined,
+        endDate: endDate ? new Date(`${endDate}T23:59:59`).getTime() : undefined,
       };
-
+  
       const [dashboardResponse, historyResponse] = await Promise.all([
         axios.get("http://localhost:3001/dashboard", { params }),
         axios.get("http://localhost:3001/measures/history", { params }),
       ]);
-
-      console.log(JSON.stringify(historyResponse));
-
+  
       if (dashboardResponse.data.success && historyResponse.data.success) {
         setSensorsData(dashboardResponse.data.data);
         setHistoryData(historyResponse.data.data);
@@ -109,6 +107,7 @@ function Dashboard() {
       setLoading(false);
     }
   };
+  
 
   const getMinMax = (data) => {
     const values = data.map((item) => item.value);
@@ -133,40 +132,43 @@ function Dashboard() {
 
       const chartData = chartConfig.metrics.flatMap((metric) => {
         return historyData.map((item) => {
-          const timestamp = item.created_at_mili * (item.created_at_mili < 1e12 ? 1000 : 1); // Ajusta para milissegundos, se necessário
-          if (!timestamp || isNaN(timestamp)) {
-            console.error("Timestamp inválido:", item.created_at_mili); // Depurar valores inválidos
-          }
-          const localCreatedAt = moment(timestamp).tz("America/Sao_Paulo"); // Ajusta o fuso horário
+          // Converta o timestamp para milissegundos, se necessário
+          const timestampMs = item.created_at_mili;
+          const localCreatedAt = moment(timestampMs).tz("America/Sao_Paulo");
+          
           return {
-            date: localCreatedAt.toISOString(), // ISO 8601 format
+            // Retorna como Date, que inclui data e hora
+            date: localCreatedAt.toDate(), 
             value: item[metric.field],
             type: metric.name,
           };
         });
       });
       
-      
     
       if (chartData.length === 0) return;
 
       const { min, max } = getMinMax(chartData);
 
+      // Agora no G2Plot, ao configurar o eixo X e o tooltip:
       const area = new Area(container, {
         data: chartData,
-        xField: "date", // Campo para o eixo X (timestamp)
+        xField: "date",
         yField: "value",
         seriesField: "type",
         color: chartConfig.metrics.map((m) => m.color),
         xAxis: {
           type: "time",
           label: {
-            formatter: (text) => {
-              const date = moment(parseInt(text));
-              return date.isValid() ? date.format("DD/MM/YYYY HH:mm") : text;
+            formatter: (value) => {
+              const date = moment(value).tz("America/Sao_Paulo");
+              // Ajuste o formato para incluir dia, mês, ano, hora e minuto
+              return date.format("DD/MM/YYYY");
             },
           },
         },
+        
+        
         yAxis: {
           label: {
             formatter: (text) => `${Math.round(text)}`,
@@ -175,23 +177,27 @@ function Dashboard() {
         tooltip: {
           shared: true,
           customContent: (title, items) => {
-            const formattedDate = moment(parseInt(title)).format("DD/MM/YYYY HH:mm:ss");
+            // Agora 'title' deve ser um Date object
+            const date = moment(title).tz("America/Sao_Paulo");
+            const formattedDate = date.format("DD/MM/YYYY");
+        
             const tooltipItems = items
               .map(
                 (item) =>
                   `<span style="color:${item.color}">●</span> ${item.name}: ${item.value}<br/>`
               )
               .join("");
+        
             return `<div style="padding:10px">
                       <strong>${formattedDate}</strong><br/>
                       ${tooltipItems}
                     </div>`;
           },
         },
+        
         animation: true,
         smooth: true,
       });
-      
 
       area.render();
       chartInstances.current[index] = area;
@@ -316,10 +322,11 @@ function Dashboard() {
               </button>
             </div>
           </div>
-
+          
+          <hr className="title-divisor" />
           <br></br>
           <br></br>
-
+          
           <h1 className="filter-title">Ultimas Medições do Solo</h1>
           <hr className="title-divisor" />
           <div className="stats-grid">

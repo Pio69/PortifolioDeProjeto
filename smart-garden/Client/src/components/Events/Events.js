@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
+import Sidebar from '../SideBar/Sidebar';
+import TopBar from '../TopBar/TopBar';
 import './Events.css';
 
 function Events() {
@@ -14,7 +14,6 @@ function Events() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Buscar eventos do backend e ordenar por data
 const fetchEvents = async () => {
   setIsLoading(true);
   setError('');
@@ -29,13 +28,11 @@ const fetchEvents = async () => {
         return map;
       }, {});
 
-      // Adicionar nome do dispositivo aos eventos
       const eventsWithDeviceName = eventsResponse.data.data.map((event) => ({
         ...event,
         deviceName: devicesMap[event.device_id] || 'Dispositivo Desconhecido',
       }));
 
-      // Ordenar os eventos por data de criação (decrescente, mais recente primeiro)
       const sortedEvents = eventsWithDeviceName.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
       setEvents(sortedEvents);
@@ -50,9 +47,6 @@ const fetchEvents = async () => {
   }
 };
 
-
-
-  // Buscar dispositivos do backend
   const fetchDevices = async () => {
     try {
       const response = await axios.get('http://localhost:3001/devices');
@@ -66,7 +60,6 @@ const fetchEvents = async () => {
     }
   };
 
-  // Buscar recomendação de fertilizante
   const fetchPrediction = async () => {
     try {
       const response = await axios.post('http://localhost:8000/predict?api_key=6d2a222c0a4cb9354b52687ceb0ddf1f');
@@ -76,7 +69,6 @@ const fetchEvents = async () => {
     }
   };
 
-  // Aplicar filtros de dispositivo e categoria
   const applyFilters = (deviceId, category) => {
     let filtered = events;
 
@@ -91,14 +83,12 @@ const fetchEvents = async () => {
     setFilteredEvents(filtered);
   };
 
-  // Manipulador para mudança no dropdown de dispositivos
   const handleDeviceFilterChange = (e) => {
     const value = e.target.value;
     setSelectedDevice(value);
     applyFilters(value, selectedCategory);
   };
 
-  // Manipulador para mudança no dropdown de categorias
   const handleCategoryFilterChange = (e) => {
     const value = e.target.value;
     setSelectedCategory(value);
@@ -117,7 +107,6 @@ const fetchEvents = async () => {
       setError('Erro ao deletar evento. Tente novamente.');
     }
   };
-  
 
   useEffect(() => {
     const fetchData = async () => {
